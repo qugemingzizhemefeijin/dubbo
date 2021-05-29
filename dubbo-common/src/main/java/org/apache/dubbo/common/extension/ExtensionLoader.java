@@ -63,16 +63,25 @@ import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.REMOVE_VALUE_PREFIX;
 
 /**
+ *
+ * <p>此类是实现Dubbo SPI机制的核心类
+ * <p>Dubbo的SPI与Java的SPI的区别：
+ * <ul>
+ * <li>1.JDK的SPI会一次性实例化扩展点的所有实例，如果实例初始化非常耗时或者实例没有用上，会非常的耗损资源。</li>
+ * <li>2.如果JDK的扩展类加载失败的话，异常信息会被JDK吞掉。</li>
+ * <li>3.Dubbo SPI增加了对扩展的IOC和AOP的支持，一个扩展可以直接通过setter注入其他扩展。</li>
+ * </ul>
+ *
  * {@link org.apache.dubbo.rpc.model.ApplicationModel}, {@code DubboBootstrap} and this class are
  * at present designed to be singleton or static (by itself totally static or uses some static fields).
  * So the instances returned from them are of process or classloader scope. If you want to support
  * multiple dubbo servers in a single process, you may need to refactor these three classes.
  * <p>
- * Load dubbo extensions
+ * 扩展点的特性
  * <ul>
- * <li>auto inject dependency extension </li>
- * <li>auto wrap extension in wrapper </li>
- * <li>default extension is an adaptive instance</li>
+ * <li>自动注入依赖 </li>
+ * <li>自动包装，如果发现这个扩展类包含其他扩展点作为构造函数的参数，则这个扩展类就会被认为是Wrapper类，会自动传入一个实现的接口的类 </li>
+ * <li>默认扩展名是自适应实例，通过@Adaptive根据URL中的参数</li>
  * </ul>
  *
  * @see <a href="http://java.sun.com/j2se/1.5.0/docs/guide/jar/jar.html#Service%20Provider">Service Provider in Java 5</a>
