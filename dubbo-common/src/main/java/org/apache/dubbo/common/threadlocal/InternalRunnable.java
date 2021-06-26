@@ -23,6 +23,9 @@ package org.apache.dubbo.common.threadlocal;
  * There is a risk of memory leak when using {@link InternalThreadLocal} without calling
  * {@link InternalThreadLocal#removeAll()}.
  * This design is learning from {@see io.netty.util.concurrent.FastThreadLocalRunnable} which is in Netty.
+ *
+ * <p>上面注释意思是InternalThreadLocal如果不调用removeAll，可能会存在内存泄露，
+ * 所以这个类是从netty中的FastThreadLocalRunnable中学习的使用方式
  */
 public class InternalRunnable implements Runnable{
     private final Runnable runnable;
@@ -40,6 +43,7 @@ public class InternalRunnable implements Runnable{
         try{
             runnable.run();
         }finally {
+            //对资源进行一些清空
             InternalThreadLocal.removeAll();
         }
     }

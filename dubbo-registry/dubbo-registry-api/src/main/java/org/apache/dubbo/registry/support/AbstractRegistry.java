@@ -214,7 +214,7 @@ public abstract class AbstractRegistry implements Registry {
         if (file != null && file.exists()) {
             InputStream in = null;
             try {
-                in = new FileInputStream(file);
+                in = new FileInputStream(file); // 读取磁盘上的文件
                 properties.load(in);
                 if (logger.isInfoEnabled()) {
                     logger.info("Load registry cache file " + file + ", data: " + properties);
@@ -454,6 +454,7 @@ public abstract class AbstractRegistry implements Registry {
             properties.setProperty(url.getServiceKey(), buf.toString());
             long version = lastCacheChanged.incrementAndGet();
             if (syncSaveFile) {
+                // 同步保存
                 doSaveProperties(version);
             } else {
                 registryCacheExecutor.execute(new SaveProperties(version));

@@ -656,6 +656,7 @@ public class ExtensionLoader<T> {
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.getDeclaredConstructor().newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
+            // 向扩展类注入其依赖的属性， 如扩展类A又依赖了扩展类B
             injectExtension(instance);
 
 
@@ -669,10 +670,12 @@ public class ExtensionLoader<T> {
                 }
 
                 if (CollectionUtils.isNotEmpty(wrapperClassesList)) {
+                    // 遍历扩展点包装类， 用于初始化包装类实例
                     for (Class<?> wrapperClass : wrapperClassesList) {
                         Wrapper wrapper = wrapperClass.getAnnotation(Wrapper.class);
                         if (wrapper == null
                                 || (ArrayUtils.contains(wrapper.matches(), name) && !ArrayUtils.contains(wrapper.mismatches(), name))) {
+                            // 找到构造方法参数类型为type (扩展类的类型)的包装类， 为其注入扩展类实例
                             instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
                         }
                     }
@@ -692,13 +695,13 @@ public class ExtensionLoader<T> {
     }
 
     private T injectExtension(T instance) {
-
         if (objectFactory == null) {
             return instance;
         }
 
         try {
             for (Method method : instance.getClass().getMethods()) {
+                // 找到以 set 开头的方法。要求只能有一个参数，并且是public方法
                 if (!isSetter(method)) {
                     continue;
                 }
@@ -843,6 +846,7 @@ public class ExtensionLoader<T> {
                 }
             }
 
+            // 通过 getResources 或 getSystemResources 得到配置文件
             if (urls == null || !urls.hasMoreElements()) {
                 if (classLoader != null) {
                     urls = classLoader.getResources(fileName);
@@ -935,6 +939,8 @@ public class ExtensionLoader<T> {
             String[] names = NAME_SEPARATOR.split(name);
             if (ArrayUtils.isNotEmpty(names)) {
                 cacheActivateClass(clazz, names[0]);
+                // 不是自适应类型， 也不是包装类型， 剩下的就是普通扩展类了， 也会缓存起来
+                //注意： 自动激活也是普通扩展类的一种， 只是会根据不同条件同时激活罢了
                 for (String n : names) {
                     cacheName(clazz, n);
                     saveInExtensionClass(extensionClasses, clazz, n, overridden);
@@ -974,6 +980,7 @@ public class ExtensionLoader<T> {
      * for compatibility, also cache class with old alibaba Activate annotation
      */
     private void cacheActivateClass(Class<?> clazz, String name) {
+        // 如果有自动激活注解(Activate ),则缓存到自动激活的缓存中
         Activate activate = clazz.getAnnotation(Activate.class);
         if (activate != null) {
             cachedActivates.put(name, activate);
@@ -991,8 +998,10 @@ public class ExtensionLoader<T> {
      */
     private void cacheAdaptiveClass(Class<?> clazz, boolean overridden) {
         if (cachedAdaptiveClass == null || overridden) {
+            // 如果是自适应类(Adaptive )则缓存,缓存的自适应类只能有一个
             cachedAdaptiveClass = clazz;
         } else if (!cachedAdaptiveClass.equals(clazz)) {
+            // 如果发现有多个自适应类， 则抛出异常
             throw new IllegalStateException("More than 1 adaptive class found: "
                     + cachedAdaptiveClass.getName()
                     + ", " + clazz.getName());
@@ -1005,6 +1014,7 @@ public class ExtensionLoader<T> {
      * like: ProtocolFilterWrapper, ProtocolListenerWrapper
      */
     private void cacheWrapperClass(Class<?> clazz) {
+        // 如果是包装扩展类(Wrapper ),则直接加入包装扩展类的Set集合
         if (cachedWrapperClasses == null) {
             cachedWrapperClasses = new ConcurrentHashSet<>();
         }

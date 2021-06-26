@@ -43,6 +43,7 @@ public class NamedThreadFactory implements ThreadFactory {
     }
 
     public NamedThreadFactory(String prefix, boolean daemon) {
+        // 在传入的prefix修改
         mPrefix = prefix + "-thread-";
         mDaemon = daemon;
         SecurityManager s = System.getSecurityManager();
