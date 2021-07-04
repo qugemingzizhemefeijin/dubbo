@@ -511,6 +511,15 @@ public class RegistryProtocol implements Protocol {
         return doCreateInvoker(directory, cluster, registry, type);
     }
 
+    /**
+     * 创建ClusterInvoker
+     * @param directory
+     * @param cluster
+     * @param registry
+     * @param type
+     * @param <T>
+     * @return
+     */
     protected <T> ClusterInvoker<T> doCreateInvoker(DynamicDirectory<T> directory, Cluster cluster, Registry registry, Class<T> type) {
         directory.setRegistry(registry);
         directory.setProtocol(protocol);

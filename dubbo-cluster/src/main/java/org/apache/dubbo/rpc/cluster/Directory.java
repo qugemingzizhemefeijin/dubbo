@@ -29,6 +29,11 @@ import java.util.List;
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Directory_service">Directory Service</a>
  *
+ * <p>Directory也有多种实现子类，既可以提供静态的Invoker列表，也可以提供动态的Invoker列表。
+ * 静态列表是用户自己设置的Invoker列表；动态列表根据注册中心的数据动态变化，动态更新Invoker列表的数据， 整个过程对上层透明。
+ *
+ * <p>主要的两个实现类为 RegistryDirectory和{@link org.apache.dubbo.rpc.cluster.directory.StaticDirectory}
+ *
  * @see org.apache.dubbo.rpc.cluster.Cluster#join(Directory)
  */
 public interface Directory<T> extends Node {

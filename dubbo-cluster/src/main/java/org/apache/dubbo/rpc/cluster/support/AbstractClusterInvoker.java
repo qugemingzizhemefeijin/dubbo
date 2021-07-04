@@ -251,17 +251,24 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
 
     @Override
     public Result invoke(final Invocation invocation) throws RpcException {
+        // 判断是否destroy
         checkWhetherDestroyed();
 
         // binding attachments into invocation.
+        // 从RpcContext中，查询当前请求有没有携带其他信息
         Map<String, Object> contextAttachments = RpcContext.getContext().getObjectAttachments();
         if (contextAttachments != null && contextAttachments.size() != 0) {
+            // 有则加入进去
             ((RpcInvocation) invocation).addObjectAttachments(contextAttachments);
         }
 
+        // 通过Directory 获取到所有可用的invoker
         List<Invoker<T>> invokers = list(invocation);
+        // 初始化LoadBalance 的SPI ，默认使用的是 RandomLoadBalance
         LoadBalance loadbalance = initLoadBalance(invokers, invocation);
+        // 如果是异步调用，则需要 在Invocation 中增加一个id，用于标识这次Invocation
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
+        // 执行子类doInvoke方法
         return doInvoke(invocation, invokers, loadbalance);
     }
 

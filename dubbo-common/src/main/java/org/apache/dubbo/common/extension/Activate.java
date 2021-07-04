@@ -47,7 +47,9 @@ public @interface Activate {
      * Activate the current extension when one of the groups matches. The group passed into
      * {@link ExtensionLoader#getActivateExtension(URL, String, String)} will be used for matching.
      *
-     * URL中的分组如果匹配则激活， 则可以设置多个
+     * 指定分组，表示在指定分组下才能激活当前的扩展实现，没有指定分组将会默认是匹配。
+     * 此处的分组跟我们服务的分组不是一个东西，这里的分组表示的是提供者还是消费者，
+     * 比如Filter扩展点下面有很多实现，但是有些只能在提供者端使用，有的只能在消费者端使用，就是使用这个group来进行控制
      *
      * @return group names to match
      * @see ExtensionLoader#getActivateExtension(URL, String, String)
@@ -61,7 +63,9 @@ public @interface Activate {
      * there's either <code>cache</code> or <code>validation</code> key appeared in the URL's parameters.
      * </p>
      *
-     * 查找URL中如果含有该key值， 则会激活
+     * 指定dubbo接口的URL中的参数名称，如果配置的话就需要去URL中根据配置的名称去获取参数值，如果URL中没有此参数就不会被激活。
+     * 如果不配置默认表示激活。例如某实现类上有注解@Activate("cache, validation")就表示如果url中能够找到cache参数
+     * 或者有validation参数就激活当前扩展点实现。
      *
      * @return URL parameter keys
      * @see ExtensionLoader#getActivateExtension(URL, String)
@@ -94,7 +98,7 @@ public @interface Activate {
     /**
      * Absolute ordering info, optional
      *
-     * 整型， 直接的排序信息
+     * 整型，直接的排序信息
      *
      * @return absolute ordering info
      */

@@ -32,6 +32,8 @@ import java.util.List;
  * When invoke fails, log the error message and ignore this error by returning an empty Result.
  * Usually used to write audit logs and other operations
  *
+ * <p>当出现异常时，直接忽略异常
+ *
  * <a href="http://en.wikipedia.org/wiki/Fail-safe">Fail-safe</a>
  *
  */
@@ -45,11 +47,15 @@ public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @Override
     public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         try {
+            // 1、校验从AbstractClusterInvoker传入的Invoker列表是否为空
             checkInvokers(invokers, invocation);
+            // 2、调用负载均衡，选择出某一个invokers
             Invoker<T> invoker = select(loadbalance, invocation, invokers, null);
+            // 3、使用选出的invoker，执行invoke方法
             return invoker.invoke(invocation);
         } catch (Throwable e) {
             logger.error("Failsafe ignore exception: " + e.getMessage(), e);
+            // 这里可以看到t=null，异常被吞了不会返回给客户端，但是服务端还是会打印的。
             return AsyncRpcResult.newDefaultAsyncResult(null, null, invocation); // ignore
         }
     }

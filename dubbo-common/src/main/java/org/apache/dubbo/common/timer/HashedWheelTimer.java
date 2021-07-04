@@ -112,6 +112,10 @@ public class HashedWheelTimer implements Timer {
     private final Queue<HashedWheelTimeout> timeouts = new LinkedBlockingQueue<>();
     private final Queue<HashedWheelTimeout> cancelledTimeouts = new LinkedBlockingQueue<>();
     private final AtomicLong pendingTimeouts = new AtomicLong(0);
+
+    /**
+     * 最大的任务数量，默认100，由 FailbackClusterInvoker failbackTasks属性传递过来
+     */
     private final long maxPendingTimeouts;
 
     private volatile long startTime;
@@ -383,8 +387,10 @@ public class HashedWheelTimer implements Timer {
             throw new NullPointerException("unit");
         }
 
+        // 当前正在执行的任务数 +1
         long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
 
+        // 如果当前任务数超过了maxPendingTimeouts，则抛出RejectedExecutionException异常
         if (maxPendingTimeouts > 0 && pendingTimeoutsCount > maxPendingTimeouts) {
             pendingTimeouts.decrementAndGet();
             throw new RejectedExecutionException("Number of pending timeouts ("
