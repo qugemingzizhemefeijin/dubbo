@@ -67,6 +67,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * share it across your application.  One of the common mistakes, that makes
  * your application unresponsive, is to create a new instance for every connection.
  *
+ * 每当实例化和启动时都会创建一个新线程。因此，您应该确保只创建一个实例并在您的应用程序中共享它。
+ * 使您的应用程序无响应的常见错误之一是为每个连接创建一个新实例
+ *
  * <h3>Implementation Details</h3>
  * <p>
  * {@link HashedWheelTimer} is based on
@@ -92,21 +95,50 @@ public class HashedWheelTimer implements Timer {
     private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
 
+    /**
+     * 定时器的主要工作处理者
+     */
     private final Worker worker = new Worker();
+
+    /**
+     * 当前定时器的线程对象
+     */
     private final Thread workerThread;
 
+    /**
+     * 初始化状态
+     */
     private static final int WORKER_STATE_INIT = 0;
+
+    /**
+     * 已开始状态
+     */
     private static final int WORKER_STATE_STARTED = 1;
+
+    /**
+     * 被关闭状态
+     */
     private static final int WORKER_STATE_SHUTDOWN = 2;
 
     /**
-     * 0 - init, 1 - started, 2 - shut down
+     * 0 - init, 1 - started, 2 - shut down ，当前Timer的状态
      */
     @SuppressWarnings({"unused", "FieldMayBeFinal"})
     private volatile int workerState;
 
+    /**
+     * 默认100毫秒一次转动
+     */
     private final long tickDuration;
+
+    /**
+     * 哈希轮对象数组，Dubbo使用了32的长度
+     */
     private final HashedWheelBucket[] wheel;
+
+    /**
+     * 此值是wheel.length - 1的值，主要用于hash计算桶的索引
+     */
     private final int mask;
     private final CountDownLatch startTimeInitialized = new CountDownLatch(1);
     private final Queue<HashedWheelTimeout> timeouts = new LinkedBlockingQueue<>();
@@ -114,10 +146,13 @@ public class HashedWheelTimer implements Timer {
     private final AtomicLong pendingTimeouts = new AtomicLong(0);
 
     /**
-     * 最大的任务数量，默认100，由 FailbackClusterInvoker failbackTasks属性传递过来
+     * 最大的任务数量，默认100，由 FailbackClusterInvoker failbackTasks属性传递过来，默认是-1不限制
      */
     private final long maxPendingTimeouts;
 
+    /**
+     * 此时间表示的是时间轮工作线程的启动时间，初始化在Worker对象的run中。
+     */
     private volatile long startTime;
 
     /**
@@ -240,9 +275,11 @@ public class HashedWheelTimer implements Timer {
         }
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
+        // 初始化当前时间轮的大小，为2的幂次方，方便用于定位数组索引
         wheel = createWheel(ticksPerWheel);
         mask = wheel.length - 1;
 
+        // 将时间轮转动一次的时间转换为纳秒
         // Convert tickDuration to nanos.
         this.tickDuration = unit.toNanos(tickDuration);
 
@@ -252,8 +289,9 @@ public class HashedWheelTimer implements Timer {
                     "tickDuration: %d (expected: 0 < tickDuration in nanos < %d",
                     tickDuration, Long.MAX_VALUE / wheel.length));
         }
+        // 默认初始化一个单线程
         workerThread = threadFactory.newThread(worker);
-
+        // 最大的任务数量，默认100，由 FailbackClusterInvoker failbackTasks属性传递过来，默认是-1不限制
         this.maxPendingTimeouts = maxPendingTimeouts;
 
         if (INSTANCE_COUNTER.incrementAndGet() > INSTANCE_COUNT_LIMIT &&
@@ -275,6 +313,11 @@ public class HashedWheelTimer implements Timer {
         }
     }
 
+    /**
+     * 创建HashedWheelBucket数组，按照2次幂的规则创建指定大小的数组
+     * @param ticksPerWheel 创建的数量要求，默认512，实际Dubbo传入的是32
+     * @return HashedWheelBucket[]
+     */
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
         if (ticksPerWheel <= 0) {
             throw new IllegalArgumentException(
@@ -285,10 +328,12 @@ public class HashedWheelTimer implements Timer {
                     "ticksPerWheel may not be greater than 2^30: " + ticksPerWheel);
         }
 
+        // 获取最近的一个2次幂的数值
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
+        // 创建出指定数量的桶
         HashedWheelBucket[] wheel = new HashedWheelBucket[ticksPerWheel];
         for (int i = 0; i < wheel.length; i++) {
-            wheel[i] = new HashedWheelBucket();
+            wheel[i] = new HashedWheelBucket();// 桶内部对象维护了头尾链表
         }
         return wheel;
     }
@@ -311,6 +356,7 @@ public class HashedWheelTimer implements Timer {
      *                               {@linkplain #stop() stopped} already
      */
     public void start() {
+        // 首次初始化的时候此方法才有用，否则无用或者被shutdown后抛出异常。主要用于初始化此类的startTime的时间。
         switch (WORKER_STATE_UPDATER.get(this)) {
             case WORKER_STATE_INIT:
                 if (WORKER_STATE_UPDATER.compareAndSet(this, WORKER_STATE_INIT, WORKER_STATE_STARTED)) {
@@ -398,16 +444,19 @@ public class HashedWheelTimer implements Timer {
                     + "timeouts (" + maxPendingTimeouts + ")");
         }
 
+        // 这里在启动工作线程后，会暂停等待一点点时间，完成startTime的初始化，主要是为了精准的控制线程启动的时间来计算deadline的时间
         start();
 
         // Add the timeout to the timeout queue which will be processed on the next tick.
         // During processing all the queued HashedWheelTimeouts will be added to the correct HashedWheelBucket.
+        // 计算到期执行的时间，dubbo传入的是5秒，此处deadline计算的是时间轮启动为止到当前时间5秒后的一个纳秒数
         long deadline = System.nanoTime() + unit.toNanos(delay) - startTime;
 
         // Guard against overflow.
         if (delay > 0 && deadline < 0) {
             deadline = Long.MAX_VALUE;
         }
+        // 将其封装并维护到timeouts队列中
         HashedWheelTimeout timeout = new HashedWheelTimeout(this, task, deadline);
         timeouts.add(timeout);
         return timeout;

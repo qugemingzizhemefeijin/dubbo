@@ -163,7 +163,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
         @Override
         public void run(Timeout timeout) {
             try {
-                // 1、调用负载均衡，选择出某一个invokers，这里会将上一次调用的Invoker抛出掉，具体逻辑在select方法中
+                // 1、调用负载均衡，选择出某一个invokers，这里会将上一次调用的Invoker排除掉，具体逻辑在select方法中
                 Invoker<T> retryInvoker = select(loadbalance, invocation, invokers, Collections.singletonList(lastInvoker));
                 lastInvoker = retryInvoker;
                 // 2、使用选出的invoker，执行invoke方法
