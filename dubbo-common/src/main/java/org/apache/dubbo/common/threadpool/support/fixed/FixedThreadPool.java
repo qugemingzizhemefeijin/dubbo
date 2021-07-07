@@ -44,6 +44,8 @@ public class FixedThreadPool implements ThreadPool {
     @Override
     public Executor getExecutor(URL url) {
         // 根据URL中的threadname取名称，如果为空，则默认为Dubbo
+        // 实际真正的设置在org.apache.dubbo.remoting.transport.netty.NettyServer中的构造函数中
+        // 调用了org.apache.dubbo.common.utils.ExecutorUtil.setThreadName方法，所有默认的名字是 DubboServerHandler-IP:PORT-thread-N
         String name = url.getParameter(THREAD_NAME_KEY, DEFAULT_THREAD_NAME);
         // 根据URL中的threads初始化线程大小，如果为空，则默认为200
         int threads = url.getParameter(THREADS_KEY, DEFAULT_THREADS);

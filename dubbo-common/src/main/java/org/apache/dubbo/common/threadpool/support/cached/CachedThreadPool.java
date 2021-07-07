@@ -47,6 +47,8 @@ public class CachedThreadPool implements ThreadPool {
     @Override
     public Executor getExecutor(URL url) {
         // 线程池名称，默认Dubbo前缀
+        // 实际真正的设置在org.apache.dubbo.remoting.transport.netty.NettyServer中的构造函数中
+        // 调用了org.apache.dubbo.common.utils.ExecutorUtil.setThreadName方法，所有默认的名字是 DubboServerHandler-IP:PORT-thread-N
         String name = url.getParameter(THREAD_NAME_KEY, DEFAULT_THREAD_NAME);
         // 核心线程数，默认0
         int cores = url.getParameter(CORE_THREADS_KEY, DEFAULT_CORE_THREADS);

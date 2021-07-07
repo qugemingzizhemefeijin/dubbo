@@ -37,20 +37,27 @@ import static org.apache.dubbo.common.constants.CommonConstants.THREAD_NAME_KEY;
 
 /**
  * EagerThreadPool
- * When the core threads are all in busy,
- * create new thread instead of putting task into blocking queue.
+ * 当所有核心线程数都处于忙碌状态时，优先创建新线程执行任务
  */
 public class EagerThreadPool implements ThreadPool {
 
     @Override
     public Executor getExecutor(URL url) {
+        // 线程池名称，默认Dubbo前缀
+        // 实际真正的设置在org.apache.dubbo.remoting.transport.netty.NettyServer中的构造函数中
+        // 调用了org.apache.dubbo.common.utils.ExecutorUtil.setThreadName方法，所有默认的名字是 DubboServerHandler-IP:PORT-thread-N
         String name = url.getParameter(THREAD_NAME_KEY, DEFAULT_THREAD_NAME);
+        // 核心线程数，默认0
         int cores = url.getParameter(CORE_THREADS_KEY, DEFAULT_CORE_THREADS);
+        // 最大线程数，不限
         int threads = url.getParameter(THREADS_KEY, Integer.MAX_VALUE);
+        // 任务队列数，如果未配置或小于等于0，则默认为1
         int queues = url.getParameter(QUEUES_KEY, DEFAULT_QUEUES);
+        // 线程存活时间，默认1分钟
         int alive = url.getParameter(ALIVE_KEY, DEFAULT_ALIVE);
 
         // init queue and executor
+        // 这里的TaskQueue继承了LinkedBlockingQueue，主要从写了offer方法，判断当前线程池是否允许添加到队列（不允许的话，线程池将执行扩张到maximumPoolSize的动作）
         TaskQueue<Runnable> taskQueue = new TaskQueue<Runnable>(queues <= 0 ? 1 : queues);
         EagerThreadPoolExecutor executor = new EagerThreadPoolExecutor(cores,
                 threads,

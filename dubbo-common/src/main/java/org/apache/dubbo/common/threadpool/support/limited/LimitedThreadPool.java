@@ -45,10 +45,20 @@ public class LimitedThreadPool implements ThreadPool {
 
     @Override
     public Executor getExecutor(URL url) {
+        // 线程池名称，默认Dubbo前缀
+        // 实际真正的设置在org.apache.dubbo.remoting.transport.netty.NettyServer中的构造函数中
+        // 调用了org.apache.dubbo.common.utils.ExecutorUtil.setThreadName方法，所有默认的名字是 DubboServerHandler-IP:PORT-thread-N
         String name = url.getParameter(THREAD_NAME_KEY, DEFAULT_THREAD_NAME);
+        // 核心线程数，默认0
         int cores = url.getParameter(CORE_THREADS_KEY, DEFAULT_CORE_THREADS);
+        // 最大线程数，默认200
         int threads = url.getParameter(THREADS_KEY, DEFAULT_THREADS);
+        // 根据URL中的queues初始化任务队列大小
+        // 0 代表使用 SynchronousQueue队列（默认）
+        // < 0 则使用LinkedBlockingQueue 无界队列
+        // > 0 则使用LinkedBlockingQueue 指定队列上限
         int queues = url.getParameter(QUEUES_KEY, DEFAULT_QUEUES);
+        // 这里可以看到线程的存活时间是Long.MAX_VALUE，基本就是无限时间了
         return new ThreadPoolExecutor(cores, threads, Long.MAX_VALUE, TimeUnit.MILLISECONDS,
                 queues == 0 ? new SynchronousQueue<Runnable>() :
                         (queues < 0 ? new LinkedBlockingQueue<Runnable>()
