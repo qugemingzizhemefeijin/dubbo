@@ -38,6 +38,7 @@ import org.apache.dubbo.rpc.RpcException;
  *      failback : 请求失败后，会自动记录在失败队列中，并由一个定时线程池定时重试。
  *      forking : 同时调用多个相同的服务，只要其中一个返回，则立即返回结果。用户可以配置forks=""参数来确定最大并行调用的服务数量。
  *      broadcast : 广播调用所有可用的服务，任意一个节点报错则报错。
+ *      broadcast2 :
  *      mock : 提供调用失败时，返回伪造的响应结果。或直接强制返回伪造的结果，不会发起远程调用
  *      available : 最简单的方式，请求不会做负载均衡，遍历所有服务列表，找到第一个可用的节点，直接请求并返回结果。如果没有可用的节点，则直接抛出异常
  *      mergeable : Mergeable可以自动把多个节点请求得到的结果进行合并。dubbo:reference标签中通过merger="true"开启，合并时可以通过group="*"属性指定需要合并哪些分组的结果。

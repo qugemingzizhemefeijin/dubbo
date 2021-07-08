@@ -285,6 +285,11 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
         return getInterface() + " -> " + getUrl().toString();
     }
 
+    /**
+     * 校验从AbstractClusterInvoker传入的Invoker列表是否为空
+     * @param invokers   当前可调用的列表
+     * @param invocation 调用对象
+     */
     protected void checkInvokers(List<Invoker<T>> invokers, Invocation invocation) {
         if (CollectionUtils.isEmpty(invokers)) {
             throw new RpcException(RpcException.NO_INVOKER_AVAILABLE_AFTER_FILTER, "Failed to invoke the method "

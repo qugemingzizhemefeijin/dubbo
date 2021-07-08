@@ -42,7 +42,11 @@ import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_FORKS;
 /**
  * NOTICE! This implementation does not work well with async call.
  *
+ * 注意！此实现不适用于异步调用。
+ *
  * Invoke a specific number of invokers concurrently, usually used for demanding real-time operations, but need to waste more service resources.
+ *
+ * 同时调用多个相同的服务，只要其中一个返回，则立即返回结果。用户可以配置forks=""参数来确定最大并行调用的服务数量。会耗费更多的服务器资源。
  *
  * <a href="http://en.wikipedia.org/wiki/Fork_(topology)">Fork</a>
  */
@@ -51,6 +55,8 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
     /**
      * Use {@link NamedInternalThreadFactory} to produce {@link org.apache.dubbo.common.threadlocal.InternalThread}
      * which with the use of {@link org.apache.dubbo.common.threadlocal.InternalThreadLocal} in {@link RpcContext}.
+     *
+     * 这里new了一个newCachedThreadPool的线程池
      */
     private final ExecutorService executor = Executors.newCachedThreadPool(
             new NamedInternalThreadFactory("forking-cluster-timer", true));
@@ -63,10 +69,14 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Result doInvoke(final Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         try {
+            // 1、检查是否可用服务列表未空
             checkInvokers(invokers, invocation);
             final List<Invoker<T>> selected;
+            // 2、获取forks值，默认值为2
             final int forks = getUrl().getParameter(FORKS_KEY, DEFAULT_FORKS);
+            // 3、获取timeout值，默认为1秒
             final int timeout = getUrl().getParameter(TIMEOUT_KEY, DEFAULT_TIMEOUT);
+            // 4、选取可用的服务，如果forks大于服务数量，则直接为服务集合，否则需要通过负载均衡算法来获取可调用服务
             if (forks <= 0 || forks >= invokers.size()) {
                 selected = invokers;
             } else {
@@ -81,6 +91,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
             }
             RpcContext.getContext().setInvokers((List) selected);
             final AtomicInteger count = new AtomicInteger();
+            // 5、下面的代码没什么说的了，就是通过LinkedBlockingQueue来实现获取一个调用成功，即可完成。
             final BlockingQueue<Object> ref = new LinkedBlockingQueue<>();
             for (final Invoker<T> invoker : selected) {
                 executor.execute(() -> {
@@ -89,6 +100,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
                         ref.offer(result);
                     } catch (Throwable e) {
                         int value = count.incrementAndGet();
+                        // 这里如果所有的都失败了，则将异常信息存入LinkedBlockingQueue中
                         if (value >= selected.size()) {
                             ref.offer(e);
                         }
@@ -96,6 +108,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 });
             }
             try {
+                // 6、该返回返回，该异常异常，没什么好说的。
                 Object ret = ref.poll(timeout, TimeUnit.MILLISECONDS);
                 if (ret instanceof Throwable) {
                     Throwable e = (Throwable) ret;
