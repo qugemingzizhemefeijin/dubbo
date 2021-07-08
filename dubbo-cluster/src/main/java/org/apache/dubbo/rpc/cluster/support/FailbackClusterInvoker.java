@@ -86,6 +86,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
         failbackTasks = failbackTasksConfig;
     }
 
+    // 在调用 doInvoke() 方法失败以后，提交一个定时任务在 5s 后执行重试，如果还是失败，之后每 5s 重试一次，最多重试 3 次，如果重试 3 次都失败，记录错误日志，不再重试。
     private void addFailed(LoadBalance loadbalance, Invocation invocation, List<Invoker<T>> invokers, Invoker<T> lastInvoker) {
         // 1、初始化failTimer定时器
         if (failTimer == null) {
@@ -146,7 +147,15 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
         private final Invocation invocation;
         private final LoadBalance loadbalance;
         private final List<Invoker<T>> invokers;
+
+        /**
+         * 最大重试次数
+         */
         private final int retries;
+
+        /**
+         * 每隔几秒执行一次
+         */
         private final long tick;
         private Invoker<T> lastInvoker;
         private int retryTimes = 0;

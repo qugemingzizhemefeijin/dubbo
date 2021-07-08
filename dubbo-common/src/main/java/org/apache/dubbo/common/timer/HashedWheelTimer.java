@@ -81,7 +81,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * <a href="http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt">here</a>.
  *
  * <p>
- * <a href="https://www.cnblogs.com/luozhiyun/p/12075326.html">时间轮算法（TimingWheel）是如何实现的？</a>
+ * <a href="https://www.cnblogs.com/luozhiyun/p/12075326.html">时间轮算法（TimingWheel）是如何实现的？</a> and
+ * <a href="https://www.javadoop.com/post/HashedWheelTimer">HashedWheelTimer 使用及源码分析</a>
  */
 public class HashedWheelTimer implements Timer {
 
@@ -411,6 +412,9 @@ public class HashedWheelTimer implements Timer {
 
         // Wait until the startTime is initialized by the worker.
         // 等待worker线程初始化时间轮的启动时间
+        // 第一个代码片段中的 while 换成 if 行不行？不行。
+        // Object 中的 wait/notify 存在操作系统的假唤醒，所以一般都在 while 循环里，但是这里的 CountDownLatch 不会，所以看上去这里的 while 是没必要的。
+        // 但是 CountDownLatch 没有提供 awaitUninterruptibly() 方法，所以这里其实在处理线程中断的情况。
         while (startTime == 0) {
             try {
                 // 这里使用countDownLatch来确保调度的线程已经被启动
@@ -555,6 +559,7 @@ public class HashedWheelTimer implements Timer {
             }
 
             // HashedWheelTimer的start方法会继续往下运行
+            // 第一个提交任务的线程正 await 呢，唤醒它
             // Notify the other threads waiting for the initialization at start().
             startTimeInitialized.countDown();
 
@@ -576,6 +581,8 @@ public class HashedWheelTimer implements Timer {
                 }
                 // 校验如果workerState是started状态，那么就一直循环
             } while (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_STARTED);
+
+            /* 到这里，说明这个 timer 要关闭了，做一些清理工作 */
 
             // 如果时间轮被停止，则所有的未被处理的bucket会在调用stop方法的时候返回unprocessedTimeouts队列中的数据。所以unprocessedTimeouts中的数据只是做一个记录，并不会再次被执行。
             // Fill the unprocessedTimeouts so we can return them from stop() method.
@@ -606,7 +613,7 @@ public class HashedWheelTimer implements Timer {
         private void transferTimeoutsToBuckets() {
             // transfer only max. 100000 timeouts per tick to prevent a thread to stale the workerThread when it just
             // adds new timeouts in a loop.
-            // 每次tick只处理10w个任务，以免阻塞worker线程
+            // 每次tick只处理10w个任务，以免阻塞worker线程，特地限制了10万次，就怕你写错代码，一直往里面扔任务。
             for (int i = 0; i < 100000; i++) {
                 HashedWheelTimeout timeout = timeouts.poll();
                 // 当获取到空则代表所有的都处理了
@@ -620,6 +627,8 @@ public class HashedWheelTimer implements Timer {
                     continue;
                 }
 
+                // 下面就是将任务放到相应的 bucket 中，这里还计算了每个任务的 remainingRounds
+
                 // calculated = tick 次数
                 long calculated = timeout.deadline / tickDuration;
                 // 算剩余的轮数, 只有 timer 走够轮数, 并且到达了 task 所在的 slot, task 才会过期
@@ -632,7 +641,7 @@ public class HashedWheelTimer implements Timer {
                 int stopIndex = (int) (ticks & mask);
 
                 HashedWheelBucket bucket = wheel[stopIndex];
-                // 将timeout加入到bucket链表中
+                // 单个 bucket，是由 HashedWheelTimeout 实例组成的一个链表，由于是单线程操作，不存在并发，所以代码很简单。
                 bucket.addTimeout(timeout);
             }
         }
@@ -655,8 +664,14 @@ public class HashedWheelTimer implements Timer {
         }
 
         /**
-         * 这个方法就是根据当前的时间计算出跳动到下个时间的间隔时间，并进行sleep操作，然后返回当前时间距离时间轮启动时间的时间段。
-         *
+         * <p>这个方法就是根据当前的时间计算出跳动到下个时间的间隔时间，并进行sleep操作，然后返回当前时间距离时间轮启动时间的时间段。
+         * <br><br>
+         * <p>第一次进来的时候，工作线程会在 100ms 的时候返回，返回值是 100*10^6
+         * <p>第二次进来的时候，工作线程会在 200ms 的时候返回，依次类推
+         * <br><br>
+         * <p>另外就是注意极端情况，比如第二次进来的时候，由于被前面的任务阻塞，导致进来的时候就已经是 250ms
+         * <p>那么，一进入这个方法就要立即返回，返回值是 250ms，而不是 200ms
+         * <br><br>
          * calculate goal nanoTime from startTime and current tick number,
          * then wait until that goal has been reached.
          *

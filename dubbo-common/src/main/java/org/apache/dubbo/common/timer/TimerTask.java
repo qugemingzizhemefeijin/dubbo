@@ -28,6 +28,8 @@ public interface TimerTask {
      * Executed after the delay specified with
      * {@link Timer#newTimeout(TimerTask, long, TimeUnit)}.
      *
+     * 把 Timeout 的实例也传进来了，我们平时的代码习惯，都是单向依赖。这样做也有好处，那就是在任务执行过程中，可以通过 timeout 实例来做点其他的事情。
+     *
      * @param timeout a handle which is associated with this task
      */
     void run(Timeout timeout) throws Exception;

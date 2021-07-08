@@ -30,6 +30,8 @@ public interface Timer {
      * Schedules the specified {@link TimerTask} for one-time execution after
      * the specified delay.
      *
+     * 创建一个定时任务
+     *
      * @return a handle which is associated with the specified task
      * @throws IllegalStateException      if this timer has been {@linkplain #stop() stopped} already
      * @throws RejectedExecutionException if the pending timeouts are too many and creating new timeout
@@ -41,13 +43,15 @@ public interface Timer {
      * Releases all resources acquired by this {@link Timer} and cancels all
      * tasks which were scheduled but not executed yet.
      *
+     * 停止所有的还没有被执行的定时任务，返回未被处理过且未过期和取消的任务。
+     *
      * @return the handles associated with the tasks which were canceled by
      * this method
      */
     Set<Timeout> stop();
 
     /**
-     * the timer is stop
+     * 定时器是否被暂停了
      *
      * @return true for stop
      */
