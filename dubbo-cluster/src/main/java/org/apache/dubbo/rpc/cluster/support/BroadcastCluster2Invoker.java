@@ -50,6 +50,7 @@ public class BroadcastCluster2Invoker<T> extends AbstractClusterInvoker<T> {
 
     private static final String BROADCAST_RESULTS_KEY = "broadcast.results";
 
+    // 创建会重用空闲并且可用的线程，如果无可用的线程，将会创建新的线程。线程池活跃1分钟
     private final ExecutorService executor = Executors.newCachedThreadPool(
             new NamedInternalThreadFactory("broadcast_cluster2", true));
 
@@ -60,19 +61,30 @@ public class BroadcastCluster2Invoker<T> extends AbstractClusterInvoker<T> {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Result doInvoke(final Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
+        // 1、检查是否有可用的服务
         checkInvokers(invokers, invocation);
+        // 2、设置当前上下文中使用的Invokers列表
         RpcContext.getContext().setInvokers((List) invokers);
+        // 3、调用服务
         InvokeResult res = invoke(invokers, invocation);
+        // 4、如果有异常，则返回异常信息
         if (hasException(res.exception)) {
             return createResult(invocation, res.exception, res.resultList);
         }
+        // 5、否则返回第一个返回的结果信息
         Object value = res.resultList.stream().map(it->it.getData()).findFirst().orElse(null);
         return createResult(invocation, value, res.resultList);
     }
 
-
+    /**
+     * 这里使用了线程池来异步调用所有的服务
+     * @param invokers   待调用的服务列表
+     * @param invocation 调用方法的描述对象
+     * @return InvokeResult
+     */
     private InvokeResult invoke(List<Invoker<T>> invokers, final Invocation invocation) {
         List<BroadcastResult> resultList = new ArrayList<>(invokers.size());
+        // 将所有的服务封装成Callable列表，并通过线程池调用
         List<Callable<BroadcastResult>> tasks = getCallables(invokers, invocation);
 
         try {
@@ -94,13 +106,21 @@ public class BroadcastCluster2Invoker<T> extends AbstractClusterInvoker<T> {
             resultList.add(br);
         }
 
+        // 这里将获取到所有的调用信息回传，并回传其中出现错误的一个Exception
         return new InvokeResult(resultList.stream().map(BroadcastResult::getException)
                 .filter(it -> null != it).findFirst().orElse(null), resultList);
 
     }
 
+    /**
+     * 这里主要是包装成Callable对象，方便线程池调用
+     * @param invokers   待请求的服务列表
+     * @param invocation 请求的方法描述对象
+     * @return List<Callable<BroadcastResult>>
+     */
     private List<Callable<BroadcastResult>> getCallables(List<Invoker<T>> invokers, Invocation invocation) {
         List<Callable<BroadcastResult>> tasks = invokers.stream().map(it -> (Callable<BroadcastResult>) () -> {
+            // 这里实际调用的是Callable的call
             BroadcastResult br = new BroadcastResult(it.getUrl().getIp(), it.getUrl().getPort());
             Result result = null;
             try {
@@ -140,6 +160,11 @@ public class BroadcastCluster2Invoker<T> extends AbstractClusterInvoker<T> {
     }
 
 
+    /**
+     * 判断是否是发生了错误
+     * @param exception RpcException
+     * @return boolean
+     */
     private boolean hasException(RpcException exception) {
         return null != exception;
     }
