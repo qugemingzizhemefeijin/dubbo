@@ -54,6 +54,7 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
         // The value range of broadcast.fail.threshold must be 0～100.
         // 100 means that an exception will be thrown last, and 0 means that as long as an exception occurs, it will be thrown.
         // see https://github.com/apache/dubbo/pull/7174
+        // url中的broadcast.fail.percent参数，默认为100，标识广播模式下，失败次数达到指定值的时候不会继续往下调用了，默认100表示全部都调用，如果有失败，则最后认定为失败
         int broadcastFailPercent = url.getParameter(BROADCAST_FAIL_PERCENT_KEY, MAX_BROADCAST_FAIL_PERCENT);
 
         if (broadcastFailPercent < MIN_BROADCAST_FAIL_PERCENT || broadcastFailPercent > MAX_BROADCAST_FAIL_PERCENT) {
@@ -64,9 +65,11 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
         int failThresholdIndex = invokers.size() * broadcastFailPercent / MAX_BROADCAST_FAIL_PERCENT;
         int failIndex = 0;
+        // 对所有的可调用服务列表进行循环调用
         for (Invoker<T> invoker : invokers) {
             try {
                 result = invoker.invoke(invocation);
+                // 如果异常了则获取异常信息并打印日志，记录failIndex值，如果其等于 failThresholdIndex ， 则不再继续调用
                 if (null != result && result.hasException()) {
                     Throwable resultException = result.getException();
                     if (null != resultException) {
@@ -90,13 +93,14 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
             }
         }
 
+        // 只要有一次失败，则整个调用都抛出异常。。实际还是存在部分成功的
         if (exception != null) {
             if (failIndex == failThresholdIndex) {
                 logger.debug(
                         String.format("The number of BroadcastCluster call failures has reached the threshold %s", failThresholdIndex));
             } else {
                 logger.debug(String.format("The number of BroadcastCluster call failures has not reached the threshold %s, fail size is %s",
-                        failIndex));
+                        broadcastFailPercent, failIndex));
             }
             throw exception;
         }
