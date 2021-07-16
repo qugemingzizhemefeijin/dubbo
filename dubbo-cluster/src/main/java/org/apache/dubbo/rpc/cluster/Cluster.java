@@ -48,6 +48,8 @@ import org.apache.dubbo.rpc.RpcException;
  *
  * Cluster接口下面有多种不同的实现， 每种实现中都需要实现接口的join方法， 在方法中会“new”一个对应的Clusterinvoker实现。
  *
+ * Cluster 接口和相关实现类有什么用呢？用途比较简单，仅用于生成 Cluster Invoker。
+ *
  */
 @SPI(Cluster.DEFAULT)
 public interface Cluster {
