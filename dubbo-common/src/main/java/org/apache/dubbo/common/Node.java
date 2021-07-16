@@ -18,25 +18,33 @@ package org.apache.dubbo.common;
 
 /**
  * Node. (API/SPI, Prototype, ThreadSafe)
+ *
+ * Node接口是一个顶级接口，像 Registry、Monitor、Invoker 、Directory等均继承了这个接口
+ *
  */
 public interface Node {
 
     /**
-     * get url.
+     * 获得URL对象，
+     * 以RegistryDirectory为例，
+     * URL对象是由客户端配置信息组成的，IP和端口是注册中心地址，协议表示注册中心类型
      *
      * @return url.
      */
     URL getUrl();
 
     /**
-     * is available.
+     * 判断当前对象是否有效，
+     * 以RegistryDirectory为例，
+     * 如果返回false表示已经调用过destroy方法或者RegistryDirectory保存的所有服务提供者都不可用
      *
      * @return available.
      */
     boolean isAvailable();
 
     /**
-     * destroy.
+     * 销毁当前对象，以RegistryDirectory为例，
+     * 断开与服务提供者的连接，设置是否销毁属性为true，从注册中心上删除注册信息
      */
     void destroy();
 

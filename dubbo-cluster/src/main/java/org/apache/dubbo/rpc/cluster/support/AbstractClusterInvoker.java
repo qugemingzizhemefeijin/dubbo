@@ -48,16 +48,29 @@ import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_CLUSTER_AVAILABLE_C
 import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_CLUSTER_STICKY;
 
 /**
- * AbstractClusterInvoker
+ * AbstractClusterInvoker 集群容错顶层抽象类，实现了接口Invoker。构造方法入参必须有Directory对象。
+ *
+ * Directory对象叫做服务目录，持有全部可用的远程服务提供者列表，客户端使用远程服务提供者访问远程服务。
+ * 远程服务提供者也实现了Invoker接口，如果远程服务以dubbo协议提供，那么客户端通过Invoker接口的实现类DubboInvoker访问。
+ *
  */
 public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractClusterInvoker.class);
 
+    /**
+     * 服务目录对象
+     */
     protected Directory<T> directory;
 
+    /**
+     * 使用检查服务可用
+     */
     protected boolean availablecheck;
 
+    /**
+     * 是否被销毁了
+     */
     private AtomicBoolean destroyed = new AtomicBoolean(false);
 
     private volatile Invoker<T> stickyInvoker = null;
@@ -76,6 +89,7 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
 
         this.directory = directory;
         //sticky: invoker.isAvailable() should always be checked before using when availablecheck is true.
+        // 当 cluster.availablecheck 为 true 时，应始终在使用前进行检查。默认true
         this.availablecheck = url.getParameter(CLUSTER_AVAILABLE_CHECK_KEY, DEFAULT_CLUSTER_AVAILABLE_CHECK);
     }
 
