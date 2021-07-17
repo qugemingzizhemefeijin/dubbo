@@ -26,7 +26,7 @@ import org.apache.dubbo.rpc.cluster.LoadBalance;
 import java.util.List;
 
 /**
- * AvailableCluster
+ * AvailableCluster 最简单的方式，请求不会做负载均衡，遍历所有服务列表，找到第一个可用的节点，直接请求并返回结果。如果没有可用的节点，则直接抛出异常
  *
  */
 public class AvailableClusterInvoker<T> extends AbstractClusterInvoker<T> {
@@ -37,6 +37,7 @@ public class AvailableClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     @Override
     public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
+        // 找到第一个可用的服务，直接调用。也不提前检查是否有可用的服务列表啥的，所以可能会报空指针异常，也可能直接报RpcException
         for (Invoker<T> invoker : invokers) {
             if (invoker.isAvailable()) {
                 return invoker.invoke(invocation);

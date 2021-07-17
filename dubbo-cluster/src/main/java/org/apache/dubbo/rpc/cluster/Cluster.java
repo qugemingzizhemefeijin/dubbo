@@ -63,6 +63,26 @@ public interface Cluster {
      *
      * 在RegistryProtocol的doRefer(Cluster, Registry, type, url)方法中会调用Cluster#join(directory) 方法，创建 Invoker 对象。
      *
+     *
+     * <pre>
+     *  //集群自适应类
+     * public class Cluster$Adaptive implements com.alibaba.dubbo.rpc.cluster.Cluster {
+     *     public com.alibaba.dubbo.rpc.Invoker join(com.alibaba.dubbo.rpc.cluster.Directory arg0) throws com.alibaba.dubbo.rpc.RpcException {
+     *         if (arg0 == null)
+     *             throw new IllegalArgumentException("com.alibaba.dubbo.rpc.cluster.Directory argument == null");
+     *         if (arg0.getUrl() == null)
+     *             throw new IllegalArgumentException("com.alibaba.dubbo.rpc.cluster.Directory argument getUrl() == null");
+     *         com.alibaba.dubbo.common.URL url = arg0.getUrl();
+     *         String extName = url.getParameter("cluster", "failover");
+     *         if (extName == null)
+     *             throw new IllegalStateException("Fail to get extension(com.alibaba.dubbo.rpc.cluster.Cluster) name from url(" + url.toString() + ") use keys([cluster])");
+     *         // 根据extName找到具体适应类，然后调用方法
+     *         com.alibaba.dubbo.rpc.cluster.Cluster extension = (com.alibaba.dubbo.rpc.cluster.Cluster) ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.cluster.Cluster.class).getExtension(extName);
+     *         return extension.join(arg0);
+     *     }
+     * }
+     * </pre>
+     *
      * @param <T>       泛型
      * @param directory Directory 对象
      * @return cluster invoker

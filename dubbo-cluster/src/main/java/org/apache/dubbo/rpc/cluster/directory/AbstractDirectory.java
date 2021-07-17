@@ -52,6 +52,9 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     protected volatile URL consumerUrl;
 
+    /**
+     * Consumer URL 中 refer 参数解析后得到的全部 KV
+     */
     protected final Map<String, String> queryMap; // Initialization at construction time, assertion not null
     protected final String consumedProtocol;
 
@@ -70,13 +73,33 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
             throw new IllegalArgumentException("url == null");
         }
 
+        // 解析refer参数值，得到其中Consumer的属性信息
+        //"init" -> "false"
+        //"side" -> "consumer"
+        //"register.ip" -> "1.1.1.1"
+        //"methods" -> "method1,method2"
+        //"release" -> "2.7.7"
+        //"dubbo" -> "2.0.2"
+        //"pid" -> "7272"
+        //"check" -> "false"
+        //"interface" -> "com.cc.user.DemoService"
+        //"version" -> "3.0.0"
+        //"qos.enable" -> "false"
+        //"timeout" -> "60000"
+        //"revision" -> "1.0.0"
+        //"connect.timeout" -> "10000"
+        //"metadata-type" -> "remote"
+        //"application" -> "dd-service"
+        //"sticky" -> "false"
+        //"timestamp" -> "1626506775930"
         this.queryMap = StringUtils.parseQueryString(url.getParameterAndDecoded(REFER_KEY));
+        // 获取消费的Protocol，获取不到则为Dubbo
         this.consumedProtocol = this.queryMap.get(PROTOCOL_KEY) == null ? DUBBO : this.queryMap.get(PROTOCOL_KEY);
+        // 记录传入的url并移除refer和monitor参数
         this.url = url.removeParameter(REFER_KEY).removeParameter(MONITOR_KEY);
 
         String path = queryMap.get(PATH_KEY);
-        URL consumerUrlFrom = this.url.setProtocol(consumedProtocol)
-                .setPath(path == null ? queryMap.get(INTERFACE_KEY) : path);
+        URL consumerUrlFrom = this.url.setProtocol(consumedProtocol).setPath(path == null ? queryMap.get(INTERFACE_KEY) : path);
         if (isUrlFromRegistry) {
             // reserve parameters if url is already a consumer url
             consumerUrlFrom = consumerUrlFrom.clearParameters();

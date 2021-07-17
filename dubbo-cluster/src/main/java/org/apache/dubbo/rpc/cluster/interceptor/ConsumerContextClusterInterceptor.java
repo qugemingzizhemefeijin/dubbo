@@ -23,11 +23,16 @@ import org.apache.dubbo.rpc.RpcContext;
 import org.apache.dubbo.rpc.RpcInvocation;
 import org.apache.dubbo.rpc.cluster.support.AbstractClusterInvoker;
 
+/**
+ * 在 ConsumerContextClusterInterceptor 的 before() 方法中，会在 RpcContext 中设置此次调用的 Invoker 等信息，
+ * 同时还会删除之前与当前线程绑定的 Server Context。在 after() 方法中，会删除本地 RpcContext 的信息。
+ */
 @Activate
 public class ConsumerContextClusterInterceptor implements ClusterInterceptor, ClusterInterceptor.Listener {
 
     @Override
     public void before(AbstractClusterInvoker<?> invoker, Invocation invocation) {
+        // 设置Invoker信息
         if (invocation instanceof RpcInvocation) {
             ((RpcInvocation) invocation).setInvoker(invoker);
         }
@@ -36,11 +41,13 @@ public class ConsumerContextClusterInterceptor implements ClusterInterceptor, Cl
 
     @Override
     public void after(AbstractClusterInvoker<?> clusterInvoker, Invocation invocation) {
+        // 删除本地RpcContext的信息
         RpcContext.removeContext(true);
     }
 
     @Override
     public void onMessage(Result appResponse, AbstractClusterInvoker<?> invoker, Invocation invocation) {
+        // 从AppResponse中获取attachment，并设置到RpcContext中
         RpcContext.getServerContext().setObjectAttachments(appResponse.getObjectAttachments());
     }
 

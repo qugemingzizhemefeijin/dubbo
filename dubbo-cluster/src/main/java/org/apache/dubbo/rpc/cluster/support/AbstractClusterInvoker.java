@@ -53,6 +53,11 @@ import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_CLUSTER_STICKY;
  * Directory对象叫做服务目录，持有全部可用的远程服务提供者列表，客户端使用远程服务提供者访问远程服务。
  * 远程服务提供者也实现了Invoker接口，如果远程服务以dubbo协议提供，那么客户端通过Invoker接口的实现类DubboInvoker访问。
  *
+ * 1、先生成Invoker对象，根据不同的Cluster实现生成不同类型的ClusterInvoker（这个就是服务引用阶段）
+ * 2、调用list从Directory中获取可用的服务列表（从这一步开始真正的调用流程）,接着使用Router接口根据路由规则过滤一部分服务后最终返回服务列表
+ * 3、调用select做负载均衡，通过不同的负载均衡策略选出一个服务作为最后的调用
+ * 4、调用invoke做RPC调用，对于调用出现异常、成功、失败等情况，每种容错机制会有不同的处理方式
+ *
  */
 public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
 

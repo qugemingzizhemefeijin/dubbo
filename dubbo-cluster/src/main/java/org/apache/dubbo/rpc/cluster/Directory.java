@@ -34,6 +34,8 @@ import java.util.List;
  *
  * <p>Directory记录了所有可用的远程服务列表，Directory接口是服务目录的最上层接口。所有服务目录的实现类均要实现该接口。
  *
+ * <p>AbstractDirectory 是 Directory 接口的抽象实现，其中除了维护 Consumer 端的 URL 信息，还维护了一个 RouterChain 对象，用于记录当前使用的 Router 对象集合，也就是路由规则。
+ *
  * <p>主要的两个实现类为 RegistryDirectory和{@link org.apache.dubbo.rpc.cluster.directory.StaticDirectory}
  *
  * @see org.apache.dubbo.rpc.cluster.Cluster#join(Directory)
@@ -61,6 +63,10 @@ public interface Directory<T> extends Node {
      */
     List<Invoker<T>> getAllInvokers();
 
+    /**
+     * Consumer端的URL
+     * @return URL
+     */
     URL getConsumerUrl();
 
     /**

@@ -18,9 +18,18 @@ package org.apache.dubbo.rpc.cluster;
 
 import org.apache.dubbo.common.extension.SPI;
 
+/**
+ * 合并器接口
+ * @param <T>
+ */
 @SPI
 public interface Merger<T> {
 
+    /**
+     * 合并方式
+     * @param items 待合并的对象
+     * @return T
+     */
     T merge(T... items);
 
 }

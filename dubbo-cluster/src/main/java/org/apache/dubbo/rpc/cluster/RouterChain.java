@@ -35,28 +35,48 @@ import static org.apache.dubbo.rpc.cluster.Constants.ROUTER_KEY;
 public class RouterChain<T> {
 
     // full list of addresses from registry, classified by method name.
+    // 当前 RouterChain 对象要过滤的 Invoker 集合。我们可以看到，在 StaticDirectory 中是通过 RouterChain.setInvokers() 方法进行设置的
     private List<Invoker<T>> invokers = Collections.emptyList();
 
     // containing all routers, reconstruct every time 'route://' urls change.
+    // 当前 RouterChain 中真正要使用的 Router 集合，其中不仅包括了 builtinRouters 集合中全部的 Router 对象，还包括通过 addRouters() 方法添加的 Router 对象
     private volatile List<Router> routers = Collections.emptyList();
 
     // Fixed router instances: ConfigConditionRouter, TagRouter, e.g., the rule for each instance may change but the
     // instance will never delete or recreate.
+    // 当前 RouterChain 激活的内置 Router 集合
     private List<Router> builtinRouters = Collections.emptyList();
 
     public static <T> RouterChain<T> buildChain(URL url) {
         return new RouterChain<>(url);
     }
 
+    /**
+     * 在 RouterChain 的构造函数中，会在传入的 URL 参数中查找 router 参数值，并根据该值获取确定激活的 RouterFactory，之后通过 Dubbo SPI 机制加载这些激活的 RouterFactory 对象，由 RouterFactory 创建当前激活的内置 Router 实例
+     *
+     * <pre>
+     *     URL consumer://1.1.1.1/
+     *         com.aa.OrderApi?application=demo-service&check=false&connect.timeout=10000&dubbo=2.0.2&init=false&
+     *         interface=com.cc.service.DemoApi&metadata-type=remote&methods=queryOrderCount&pid=15716&qos.enable=false&release=2.7.7&
+     *         revision=3.0.0&side=consumer&sticky=false&timeout=60000&timestamp=1626514343383&version=3.0.0
+     * </pre>
+     *
+     * @param url consumer消费方URL
+     */
     private RouterChain(URL url) {
+        // 通过ExtensionLoader加载激活的RouterFactory
         List<RouterFactory> extensionFactories = ExtensionLoader.getExtensionLoader(RouterFactory.class)
                 .getActivateExtension(url, ROUTER_KEY);
 
+        // 遍历所有RouterFactory，调用其getRouter()方法创建相应的Router对象
         List<Router> routers = extensionFactories.stream()
                 .map(factory -> factory.getRouter(url))
                 .collect(Collectors.toList());
 
+        // 初始化buildinRouters字段以及routers字段
         initWithRouters(routers);
+
+        // 完成内置 Router 的初始化之后，在 Directory 实现中还可以通过 addRouter() 方法添加新的 Router 实例到 routers 字段中。
     }
 
     /**
@@ -79,8 +99,11 @@ public class RouterChain<T> {
      */
     public void addRouters(List<Router> routers) {
         List<Router> newRouters = new ArrayList<>();
+        // 添加builtinRouters集合
         newRouters.addAll(builtinRouters);
+        // 添加传入的Router集合
         newRouters.addAll(routers);
+        // 重新排序
         CollectionUtils.sort(newRouters);
         this.routers = newRouters;
     }

@@ -28,9 +28,11 @@ import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_ZONE;
 import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_ZONE_FORCE;
 
 /**
- * Determines the zone information of current request.
+ * 确定当前请求的区域信息
  *
- * active only when url has key 'cluster=zone-aware'
+ * 仅当当前请求的url中包含cluster=zone-aware才被激活
+ *
+ * 在 ZoneAwareClusterInterceptor 的 before() 方法中，会从 RpcContext 中获取多注册中心相关的参数并设置到 Invocation 中
  */
 @Activate(value = "cluster:zone-aware")
 public class ZoneAwareClusterInterceptor implements ClusterInterceptor {
@@ -38,8 +40,11 @@ public class ZoneAwareClusterInterceptor implements ClusterInterceptor {
     @Override
     public void before(AbstractClusterInvoker<?> clusterInvoker, Invocation invocation) {
         RpcContext rpcContext = RpcContext.getContext();
+        // 从RpcContext中获取registry_zone参数和registry_zone_force参数
         String zone = (String) rpcContext.getAttachment(REGISTRY_ZONE);
         String force = (String) rpcContext.getAttachment(REGISTRY_ZONE_FORCE);
+
+        // 检测用户是否提供了ZoneDetector接口的扩展实现
         ExtensionLoader<ZoneDetector> loader = ExtensionLoader.getExtensionLoader(ZoneDetector.class);
         if (StringUtils.isEmpty(zone) && loader.hasExtension("default")) {
             ZoneDetector detector = loader.getExtension("default");
@@ -47,6 +52,7 @@ public class ZoneAwareClusterInterceptor implements ClusterInterceptor {
             force = detector.isZoneForcingEnabled(invocation, zone);
         }
 
+        // 将registry_zone参数和registry_zone_force参数设置到Invocation中
         if (StringUtils.isNotEmpty(zone)) {
             invocation.setAttachment(REGISTRY_ZONE, zone);
         }
