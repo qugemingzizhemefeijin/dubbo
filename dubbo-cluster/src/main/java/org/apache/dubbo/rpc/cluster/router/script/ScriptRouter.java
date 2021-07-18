@@ -62,12 +62,24 @@ public class ScriptRouter extends AbstractRouter {
     private static final int SCRIPT_ROUTER_DEFAULT_PRIORITY = 0;
     private static final Logger logger = LoggerFactory.getLogger(ScriptRouter.class);
 
+    /**
+     * 这是一个 static 集合，其中的 Key 是脚本语言的名称，Value 是对应的 ScriptEngine 对象。这里会按照脚本语言的类型复用 ScriptEngine 对象。
+     */
     private static final Map<String, ScriptEngine> ENGINES = new ConcurrentHashMap<>();
 
+    /**
+     * 当前 ScriptRouter 使用的 ScriptEngine 对象
+     */
     private final ScriptEngine engine;
 
+    /**
+     * 当前 ScriptRouter 使用的具体脚本内容
+     */
     private final String rule;
 
+    /**
+     * 根据 rule 这个具体脚本内容编译得到
+     */
     private CompiledScript function;
 
     private AccessControlContext accessControlContext;
@@ -83,14 +95,21 @@ public class ScriptRouter extends AbstractRouter {
                 new ProtectionDomain[]{domain});
     }
 
+    /**
+     * 首先会初始化 url 字段以及 priority 字段（用于排序），然后根据 URL 中的 type 参数初始化 engine、rule 和 function 三个核心字段
+     * @param url consumer消费方URL
+     */
     public ScriptRouter(URL url) {
         this.url = url;
         this.priority = url.getParameter(PRIORITY_KEY, SCRIPT_ROUTER_DEFAULT_PRIORITY);
 
+        // 根据URL中的type参数值，从ENGINES集合中获取对应的ScriptEngine对象
         engine = getEngine(url);
+        // 获取URL中的rule参数值，即为具体的脚本
         rule = getRule(url);
         try {
             Compilable compilable = (Compilable) engine;
+            // 编译rule字段中的脚本，得到function字段
             function = compilable.compile(rule);
         } catch (ScriptException e) {
             logger.error("route error, rule has been ignored. rule: " + rule +
@@ -124,12 +143,23 @@ public class ScriptRouter extends AbstractRouter {
         });
     }
 
+    /**
+     * 首先会创建调用 function 函数所需的入参，也就是 Bindings 对象，然后调用 function 函数得到过滤后的 Invoker 集合，
+     * 最后通过 getRoutedInvokers() 方法整理 Invoker 集合得到最终的返回值。
+     * @param invokers   要过滤的服务列表
+     * @param url        消费者URL
+     * @param invocation 调用的接口和方法描述
+     * @return List<Invoker<T>>
+     * @throws RpcException
+     */
     @Override
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
         if (engine == null || function == null) {
             return invokers;
         }
+        // 创建Bindings对象作为function函数的入参
         Bindings bindings = createBindings(invokers, invocation);
+        // 调用function函数，并在getRoutedInvokers()方法中整理得到的Invoker集合
         return getRoutedInvokers(AccessController.doPrivileged(new PrivilegedAction() {
             @Override
             public Object run() {
@@ -160,11 +190,15 @@ public class ScriptRouter extends AbstractRouter {
     }
 
     /**
-     * create bindings for script engine
+     * 创建脚本引擎的参数绑定
+     * @param invokers   待过滤的服务列表
+     * @param invocation 调用的接口和方法描述
+     * @return Bindings
      */
     private <T> Bindings createBindings(List<Invoker<T>> invokers, Invocation invocation) {
         Bindings bindings = engine.createBindings();
         // create a new List of invokers
+        // 与ScriptRouterFactory的示例脚本结合，我们可以看到这里在Bindings中为脚本中的route()函数提供了invokers、Invocation、context三个参数
         bindings.put("invokers", new ArrayList<>(invokers));
         bindings.put("invocation", invocation);
         bindings.put("context", RpcContext.getContext());

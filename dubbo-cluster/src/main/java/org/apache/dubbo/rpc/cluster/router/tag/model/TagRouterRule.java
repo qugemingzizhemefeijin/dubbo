@@ -39,6 +39,16 @@ import java.util.stream.Collectors;
  * - name: tag2
  * addresses: [ip3, ip4]
  * ...
+ *
+ * TagRouterRule 中还维护了 addressToTagnames、tagnameToAddresses 两个集合（都是 Map<String, List<String>> 类型），
+ * 分别记录了 Tag 名称到各个 address 的映射以及 address 到 Tag 名称的映射。
+ * 在 TagRouterRule 的 init() 方法中，会根据 tags 集合初始化这两个集合。
+ *
+ * 经过 TagRuleParser 解析得到的 TagRouterRule 结构：
+ * tags集合 -> Tag1(tag1, null),Tag2(tag2, [192.168.1.1:20888])
+ * addressToTagnames -> 192.168.1.1:20888 => tag2
+ * tagnameToAddresses -> tag2 => 192.168.1.1:20888
+ *
  */
 public class TagRouterRule extends AbstractRouterRule {
     private List<Tag> tags;

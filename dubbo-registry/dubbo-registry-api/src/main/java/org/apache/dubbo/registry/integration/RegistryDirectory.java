@@ -301,9 +301,10 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
     }
 
     /**
-     * @param urls
-     * @return null : no routers ,do nothing
-     * else :routers list
+     * toRouters 最核心的代码就是 Router router = ROUTER_FACTORY.getRouter(url) 创建路由规则。路由规则类型是由 url.router 决定的。
+     *
+     * @param urls 路由规则URL集合
+     * @return null : no routers ,do nothing else :routers list
      */
     private Optional<List<Router>> toRouters(List<URL> urls) {
         if (CollectionUtils.isEmpty(urls)) {
@@ -312,14 +313,17 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
 
         List<Router> routers = new ArrayList<>();
         for (URL url : urls) {
+            // empty不用管
             if (EMPTY_PROTOCOL.equals(url.getProtocol())) {
                 continue;
             }
+            // 将 url.router 参数设置为 protocol
             String routerType = url.getParameter(ROUTER_KEY);
             if (routerType != null && routerType.length() > 0) {
                 url = url.setProtocol(routerType);
             }
             try {
+                // 会适配对应的路由工厂类来创建Router对象
                 Router router = ROUTER_FACTORY.getRouter(url);
                 if (!routers.contains(router)) {
                     routers.add(router);

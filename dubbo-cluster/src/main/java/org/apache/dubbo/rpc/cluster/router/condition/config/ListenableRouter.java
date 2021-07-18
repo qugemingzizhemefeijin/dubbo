@@ -39,7 +39,24 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Abstract router which listens to dynamic configuration
+ * <p>Abstract router which listens to dynamic configuration<br><br>
+ *
+ * <p>ListenableRouter 在 ConditionRouter 基础上添加了动态配置的能力，
+ * <p>ListenableRouter 的 process() 方法与 TagRouter 中的 process() 方法类似，<br><br>
+ *
+ * <p>对于 ConfigChangedEvent.DELETE 事件，直接清空 ListenableRouter 中维护的 ConditionRouterRule 和 ConditionRouter 集合的引用；
+ * <p>对于 ADDED、UPDATED 事件，则通过 ConditionRuleParser 解析事件内容，得到相应的 ConditionRouterRule 对象和 ConditionRouter 集合。<br><br>
+ *
+ * <p>这里的 ConditionRuleParser 同样是以 yaml 文件的格式解析 ConditionRouterRule 的相关配置。<br><br>
+ *
+ * <p>ConditionRouterRule 中维护了一个 conditions 集合（List<String> 类型），记录了多个 Condition 路由规则，对应生成多个 ConditionRouter 对象。<br><br>
+ *
+ * <p>ServiceRouter 和 AppRouter 都是简单地继承了 ListenableRouter 抽象类，且没有覆盖 ListenableRouter 的任何方法，两者只有以下两点区别。<br><br>
+ * <p>一个是 priority 字段值不同。ServiceRouter 为 140，AppRouter 为 150，也就是说 ServiceRouter 要先于 AppRouter 执行。<br><br>
+ * <p>另一个是获取 ConditionRouterRule 配置的 Key 不同。
+ * ServiceRouter 使用的 RuleKey 是由 {interface}:[version]:[group] 三部分构成，获取的是一个服务对应的 ConditionRouterRule。
+ * AppRouter 使用的 RuleKey 是 URL 中的 application 参数值，获取的是一个服务实例对应的 ConditionRouterRule。
+ *
  */
 public abstract class ListenableRouter extends AbstractRouter implements ConfigurationListener {
     public static final String NAME = "LISTENABLE_ROUTER";
@@ -78,11 +95,13 @@ public abstract class ListenableRouter extends AbstractRouter implements Configu
 
     @Override
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
+        // 检查边界条件，直接返回invokers集合
         if (CollectionUtils.isEmpty(invokers) || conditionRouters.size() == 0) {
             return invokers;
         }
 
         // We will check enabled status inside each router.
+        // 路由规则进行过滤
         for (Router router : conditionRouters) {
             invokers = router.route(invokers, url, invocation);
         }

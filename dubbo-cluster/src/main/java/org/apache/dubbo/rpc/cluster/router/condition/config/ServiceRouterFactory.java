@@ -22,7 +22,7 @@ import org.apache.dubbo.rpc.cluster.CacheableRouterFactory;
 import org.apache.dubbo.rpc.cluster.Router;
 
 /**
- * Service level router factory
+ * Service level router factory，继承 CachabelRouterFactory，具有了缓存的能力。
  */
 @Activate(order = 300)
 public class ServiceRouterFactory extends CacheableRouterFactory {

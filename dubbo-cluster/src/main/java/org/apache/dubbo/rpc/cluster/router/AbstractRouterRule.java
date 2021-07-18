@@ -20,15 +20,51 @@ package org.apache.dubbo.rpc.cluster.router;
  * TODO Extract more code here if necessary
  */
 public abstract class AbstractRouterRule {
+
+    /**
+     * 记录了路由规则解析前的原始字符串配置
+     */
     private String rawRule;
+
+    /**
+     * 表示是否在每次调用时执行该路由规则。如果设置为 false，则会在 Provider 列表变更时预先执行并缓存结果，调用时直接从缓存中获取路由结果。
+     */
     private boolean runtime = true;
+
+    /**
+     * 当路由结果为空时，是否强制执行，如果不强制执行，路由结果为空的路由规则将自动失效。该字段默认值为 false。
+     */
     private boolean force = false;
+
+    /**
+     * 用于标识解析生成当前 RouterRule 对象的配置是否合法。
+     */
     private boolean valid = true;
+
+    /**
+     * 标识当前路由规则是否生效。
+     */
     private boolean enabled = true;
+
+    /**
+     * 用于表示当前 RouterRule 的优先级。
+     */
     private int priority;
+
+    /**
+     * 表示该路由规则是否为持久数据，当注册方退出时，路由规则是否依然存在。
+     */
     private boolean dynamic = false;
 
+    /**
+     * 规则使用范围，具体的service 或 application
+     */
     private String scope;
+
+    /**
+     * key 明确规则体作用在哪个服务或应用
+     * scope 为 service 时，key 由 [{group}:]{service}[:{version}] 构成；scope 为 application 时，key 为 application 的名称。
+     */
     private String key;
 
     public String getRawRule() {

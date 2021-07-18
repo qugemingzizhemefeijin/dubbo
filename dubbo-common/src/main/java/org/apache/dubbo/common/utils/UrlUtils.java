@@ -409,7 +409,15 @@ public class UrlUtils {
                 && (consumerClassifier == null || ANY_VALUE.equals(consumerClassifier) || StringUtils.isEquals(consumerClassifier, providerClassifier));
     }
 
+    /**
+     * 正则匹配规则
+     * @param pattern 可匹配/不可匹配的变量名称
+     * @param value   值
+     * @param param   服务消费者URL
+     * @return boolean
+     */
     public static boolean isMatchGlobPattern(String pattern, String value, URL param) {
+        // 如果以 $ 开头，则获取 URL 中对应的值
         if (param != null && pattern.startsWith("$")) {
             pattern = param.getRawParameter(pattern.substring(1));
         }
@@ -426,21 +434,25 @@ public class UrlUtils {
         if (StringUtils.isEmpty(pattern) || StringUtils.isEmpty(value)) {
             return false;
         }
-
+        // 获取通配符位置
         int i = pattern.lastIndexOf('*');
         // doesn't find "*"
+        // 如果value中没有 "*" 通配符，则整个字符串值匹配
         if (i == -1) {
             return value.equals(pattern);
         }
         // "*" is at the end
+        // 如果 "*" 在最后面，则匹配字符串 "*" 之前的字符串即可
         else if (i == pattern.length() - 1) {
             return value.startsWith(pattern.substring(0, i));
         }
         // "*" is at the beginning
+        // 如果 "*" 在最前面，则匹配字符串 "*" 之后的字符串即可
         else if (i == 0) {
             return value.endsWith(pattern.substring(i + 1));
         }
         // "*" is in the middle
+        // 如果 "*" 不在字符串两端，则同时匹配字符串 "*" 左右两边的字符串
         else {
             String prefix = pattern.substring(0, i);
             String suffix = pattern.substring(i + 1);
