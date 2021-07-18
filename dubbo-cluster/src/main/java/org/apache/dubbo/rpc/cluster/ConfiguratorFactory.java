@@ -23,6 +23,11 @@ import org.apache.dubbo.common.extension.SPI;
 /**
  * ConfiguratorFactory. (SPI, Singleton, ThreadSafe)
  *
+ * 其有两个实现的子类：
+ * <ol>
+ * <li>OverrideConfiguratorFactory 对应的扩展名为 override，创建的 Configurator 实现是 OverrideConfigurator；</li>
+ * <li>AbsentConfiguratorFactory 对应的扩展名是 absent，创建的 Configurator 实现类是 AbsentConfigurator。</li>
+ * </ol>
  */
 @SPI
 public interface ConfiguratorFactory {
