@@ -66,10 +66,12 @@ public interface Router extends Comparable<Router> {
     }
 
     /**
-     * To decide whether this router need to execute every time an RPC comes or should only execute when addresses or
+     * <p>To decide whether this router need to execute every time an RPC comes or should only execute when addresses or
      * rule change.
+     * <br><br>
+     * <p>表示是否在每次调用时执行该路由规则。如果设置为 false，则会在 服务/规则 列表变更时预先执行并缓存结果，调用时直接从缓存中获取路由结果。
      *
-     * @return true if the router need to execute every time.
+     * @return 如果Router每次都需要执行，则为 true
      */
     boolean isRuntime();
 
