@@ -31,6 +31,19 @@ import java.util.List;
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Load_balancing_(computing)">Load-Balancing</a>
  *
+ * <p>Dubbo 提供了 5 种负载均衡实现，分别是：
+ * <ol>
+ *   <li>基于 Hash 一致性的 {@link org.apache.dubbo.rpc.cluster.loadbalance.ConsistentHashLoadBalance}</li>
+ *   <li>基于权重随机算法的 {@link org.apache.dubbo.rpc.cluster.loadbalance.RandomLoadBalance}</li>
+ *   <li>基于最少活跃调用数算法的 {@link org.apache.dubbo.rpc.cluster.loadbalance.LeastActiveLoadBalance}</li>
+ *   <li>基于加权轮询算法的 {@link org.apache.dubbo.rpc.cluster.loadbalance.RoundRobinLoadBalance}</li>
+ *   <li>基于最短响应时间的 {@link org.apache.dubbo.rpc.cluster.loadbalance.ShortestResponseLoadBalance}</li>
+ * </ol>
+ *
+ * <p>LoadBalance 是一个扩展接口，默认使用的扩展实现是 RandomLoadBalance。
+ * <p>LoadBalance 接口中 select() 方法的核心功能是根据传入的 URL 和 Invocation，以及自身的负载均衡算法，从 Invoker 集合中选择一个 Invoker 返回。
+ * <p>AbstractLoadBalance 抽象类并没有真正实现 select() 方法，只是对 Invoker 集合为空或是只包含一个 Invoker 对象的特殊情况进行了处理
+ *
  * @see org.apache.dubbo.rpc.cluster.Cluster#join(Directory)
  */
 @SPI(RandomLoadBalance.NAME)
@@ -39,9 +52,9 @@ public interface LoadBalance {
     /**
      * select one invoker in list.
      *
-     * @param invokers   invokers.
+     * @param invokers   服务提供者provider列表.
      * @param url        refer url
-     * @param invocation invocation.
+     * @param invocation 服务rpc调用相关参数信息
      * @return selected invoker.
      */
     @Adaptive("loadbalance")

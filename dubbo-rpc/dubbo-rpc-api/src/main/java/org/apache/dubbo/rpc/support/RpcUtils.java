@@ -118,6 +118,11 @@ public class RpcUtils {
         }
     }
 
+    /**
+     * 获取本次调用的方法名称，如果方法名称为$invoke(泛化调用)，则经过判断获取第一个参数的并返回
+     * @param invocation 服务调用相关的参数信息
+     * @return String
+     */
     public static String getMethodName(Invocation invocation) {
         if ($INVOKE.equals(invocation.getMethodName())
                 && invocation.getArguments() != null
