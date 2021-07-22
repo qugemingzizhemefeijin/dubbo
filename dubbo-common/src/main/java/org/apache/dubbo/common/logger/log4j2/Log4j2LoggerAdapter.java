@@ -78,6 +78,7 @@ public class Log4j2LoggerAdapter implements LoggerAdapter {
 
     @Override
     public Logger getLogger(Class<?> key) {
+        // 创建Log4j2Logger适配器
         return new Log4j2Logger(LogManager.getLogger(key));
     }
 

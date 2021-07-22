@@ -149,6 +149,8 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
             invocation.addObjectAttachmentsIfAbsent(attachment);
         }
 
+        // 将 RpcContext 中的附加信息添加到 Invocation 中，一并传递到 Provider 端。那在 Provider 端是如何获取 Invocation 中的附加信息，并设置到 RpcContext 中的呢？
+        // 参考org.apache.dubbo.rpc.filter.ContextFilter类
         Map<String, Object> contextAttachments = RpcContext.getContext().getObjectAttachments();
         if (CollectionUtils.isNotEmptyMap(contextAttachments)) {
             /**

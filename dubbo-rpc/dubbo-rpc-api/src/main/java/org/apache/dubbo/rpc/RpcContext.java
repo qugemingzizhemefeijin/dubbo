@@ -148,6 +148,10 @@ public class RpcContext {
         return remove;
     }
 
+    /**
+     * 在整个调用过程中，禁止当前RpcContext被删除
+     * @param remove true开启,false禁止
+     */
     public void clearAfterEachInvoke(boolean remove) {
         this.remove = remove;
     }

@@ -68,6 +68,7 @@ public class Log4j2Logger implements Logger {
 
     @Override
     public void info(String msg, Throwable e) {
+        // 直接调用log4j日志框架的Logger写入日志
         logger.info(msg, e);
     }
 

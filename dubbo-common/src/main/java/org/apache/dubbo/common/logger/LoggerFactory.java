@@ -32,7 +32,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Logger factory
+ * Logger factory 中维护了一个 LOGGERS 集合（Map<String, FailsafeLogger> 类型），其中维护了当前使用的全部 FailsafeLogger 对象；
+ * FailsafeLogger 对象中封装了一个 Logger 对象，这个 Logger 接口是 Dubbo 自己定义的接口，Dubbo 针对每种第三方框架都提供了一个 Logger 接口的实现。
+ *
+ * <ol>
+ *     <li>{@link org.apache.dubbo.common.logger.slf4j.Slf4jLogger}</li>
+ *     <li>{@link org.apache.dubbo.common.logger.log4j2.Log4j2Logger}</li>
+ *     <li>{@link org.apache.dubbo.common.logger.jdk.JdkLogger}</li>
+ *     <li>{@link org.apache.dubbo.common.logger.support.FailsafeLogger}</li>
+ *     <li>{@link org.apache.dubbo.common.logger.jcl.JclLogger}</li>
+ *     <li>{@link org.apache.dubbo.common.logger.log4j.Log4jLogger}</li>
+ * </ol>
  */
 public class LoggerFactory {
 
@@ -66,6 +76,7 @@ public class LoggerFactory {
                         JclLoggerAdapter.class,
                         JdkLoggerAdapter.class
                 );
+                // 在这里会循环初始化Logger适配器，谁能成功被new出来就首先使用哪个适配器
                 for (Class<? extends LoggerAdapter> clazz : candidates) {
                     try {
                         setLoggerAdapter(clazz.newInstance());
@@ -79,6 +90,10 @@ public class LoggerFactory {
     private LoggerFactory() {
     }
 
+    /**
+     * 通过 SPI 机制初始化 LOGGER_ADAPTER
+     * @param loggerAdapter logger类型，一共6个
+     */
     public static void setLoggerAdapter(String loggerAdapter) {
         if (loggerAdapter != null && loggerAdapter.length() > 0) {
             setLoggerAdapter(ExtensionLoader.getExtensionLoader(LoggerAdapter.class).getExtension(loggerAdapter));
@@ -86,7 +101,7 @@ public class LoggerFactory {
     }
 
     /**
-     * Set logger provider
+     * Set logger provider 默认情况下是通过static块的代码来调用此方法注入Logger适配器的
      *
      * @param loggerAdapter logger provider
      */
@@ -112,7 +127,7 @@ public class LoggerFactory {
     }
 
     /**
-     * Get logger provider
+     * 通过其中的 LOGGER_ADAPTER 字段（LoggerAdapter 类型） 获取 Logger 实现对象
      *
      * @param key the returned logger will be named after key
      * @return logger provider

@@ -18,14 +18,28 @@ package org.apache.dubbo.rpc;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 用于检测当前调用是否超时
+ */
 public final class TimeoutCountDown implements Comparable<TimeoutCountDown> {
 
   public static TimeoutCountDown newCountDown(long timeout, TimeUnit unit) {
     return new TimeoutCountDown(timeout, unit);
   }
 
+  /**
+   * 超时时间，单位为毫秒
+   */
   private final long timeoutInMillis;
+
+  /**
+   * 超时的时间戳，单位为纳秒
+   */
   private final long deadlineInNanos;
+
+  /**
+   * 标识当前 TimeoutCountDown 关联的调用是否已超时
+   */
   private volatile boolean expired;
 
   private TimeoutCountDown(long timeout, TimeUnit unit) {
@@ -37,6 +51,10 @@ public final class TimeoutCountDown implements Comparable<TimeoutCountDown> {
     return timeoutInMillis;
   }
 
+  /**
+   * 比较当前时间与 deadlineInNanos 字段记录的超时时间戳。
+   * @return boolean
+   */
   public boolean isExpired() {
     if (!expired) {
       if (deadlineInNanos - System.nanoTime() <= 0) {
