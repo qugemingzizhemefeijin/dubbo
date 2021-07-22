@@ -43,7 +43,7 @@ import java.util.List;
 public interface Directory<T> extends Node {
 
     /**
-     * 服务接口的Class对象
+     * 服务接口的Class对象，例如：com.service.DemoService
      *
      * @return service type.
      */
@@ -64,7 +64,11 @@ public interface Directory<T> extends Node {
     List<Invoker<T>> getAllInvokers();
 
     /**
-     * Consumer端的URL
+     * Consumer端的注册中心信息，例如：
+     * zookeeper://192.168.1.1:2181/org.apache.dubbo.registry.RegistryService?application=demo-service&check=false&connect.timeout=10000&
+     *             dubbo=2.0.2&init=false&interface=com.service.DemoService&metadata-type=remote&methods=helloWorld&pid=14356&qos.enable=false&
+     *             register.ip=10.1.1.1&release=2.7.7&revision=1.0.0&side=consumer&sticky=false&timeout=60000&timestamp=1626770103446&version=3.0.0
+     *
      * @return URL
      */
     URL getConsumerUrl();

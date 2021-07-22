@@ -48,6 +48,14 @@ public class ActiveLimitFilter implements Filter, Filter.Listener {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        // invoker = org.apache.dubbo.rpc.protocol.AsyncToSyncInvoker@574985d8
+        // invocation = RpcInvocation [methodName=helloWorld, parameterTypes=[class com.service.DemoService], arguments=[abc], attachments={traceId=f04ddef7b03e456ab668f7f4eedf6187}]
+
+        // dubbo://127.0.0.1:20801/com.service.DemoService?actives=1&anyhost=true&application=demo-service-consumer&
+        // check=false&connect.timeout=50000&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&init=false&
+        // interface=com.service.DemoService&metadata-type=remote&methods=helloWorld,sayHello&pid=2400&qos.enable=false&
+        // register.ip=192.168.41.68&release=2.7.7&remote.application=demo-service=provider&retries=0&revision=3.0.0&
+        // helloWorld.timeout=3600000&side=consumer&sticky=false&timeout=600000&timestamp=1626676432457&version=3.0.0
         URL url = invoker.getUrl();
         String methodName = invocation.getMethodName();
         int max = invoker.getUrl().getMethodParameter(methodName, ACTIVES_KEY, 0);
@@ -107,6 +115,11 @@ public class ActiveLimitFilter implements Filter, Filter.Listener {
         notifyFinish(RpcStatus.getStatus(url, methodName), max);
     }
 
+    /**
+     * 获取一次调用的耗时统计
+     * @param invocation 调用的RPC接口和方法信息
+     * @return 耗时，毫秒
+     */
     private long getElapsed(Invocation invocation) {
         Object beginTime = invocation.get(ACTIVELIMIT_FILTER_START_TIME);
         return beginTime != null ? System.currentTimeMillis() - (Long) beginTime : 0;

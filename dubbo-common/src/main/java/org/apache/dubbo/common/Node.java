@@ -27,7 +27,11 @@ public interface Node {
     /**
      * 获得URL对象，
      * 以RegistryDirectory为例，
-     * URL对象是由客户端配置信息组成的，IP和端口是注册中心地址，协议表示注册中心类型
+     * URL对象是由客户端配置信息组成的，IP和端口是注册中心地址，协议表示注册中心类型。例如：
+     * zookeeper://192.168.1.1:2181/org.apache.dubbo.registry.RegistryService?application=demo-service&check=false&
+     *             connect.timeout=10000&dubbo=2.0.2&init=false&interface=com.service.DemoService&metadata-type=remote&methods=helloWorld&
+     *             pid=14356&qos.enable=false&register.ip=10.1.1.1&release=2.7.7&revision=1.0.0&side=consumer&sticky=false&timeout=60000&
+     *             timestamp=1626770103446&version=3.0.0
      *
      * @return url.
      */

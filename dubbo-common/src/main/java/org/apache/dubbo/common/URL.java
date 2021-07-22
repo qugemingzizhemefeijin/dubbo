@@ -1355,6 +1355,10 @@ class URL implements Serializable {
         return buildString(false, true, parameters); // no show username and password
     }
 
+    /**
+     * 返回URL中的协议，User(有的话)，IP，ServiceKey等信息，不包含参数，如：dubbo://127.0.0.1:20801/com.service.DemoService
+     * @return String
+     */
     public String toIdentityString() {
         if (identity != null) {
             return identity;

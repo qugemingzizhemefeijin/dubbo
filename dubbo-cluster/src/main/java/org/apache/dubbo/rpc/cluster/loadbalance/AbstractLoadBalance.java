@@ -27,10 +27,7 @@ import java.util.List;
 import static org.apache.dubbo.common.constants.CommonConstants.TIMESTAMP_KEY;
 import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_KEY;
 import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_SERVICE_REFERENCE_PATH;
-import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_WARMUP;
-import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_WEIGHT;
-import static org.apache.dubbo.rpc.cluster.Constants.WARMUP_KEY;
-import static org.apache.dubbo.rpc.cluster.Constants.WEIGHT_KEY;
+import static org.apache.dubbo.rpc.cluster.Constants.*;
 
 /**
  * AbstractLoadBalance
@@ -70,6 +67,16 @@ public abstract class AbstractLoadBalance implements LoadBalance {
         return doSelect(invokers, url, invocation);
     }
 
+    /**
+     * 留给具体子类实现的负载均衡策略（随机、一致性hash、加权轮询、最少活跃、最短响应时间等）
+     * @param invokers   服务提供者provider列表.
+     * @param url        注册中心，消费端的URL，协议表示注册中心类型。如：zookeeper://192.168.1.1:2181/org.apache.dubbo.registry.RegistryService?
+     *                   application=demo-service&check=false&connect.timeout=10000&dubbo=2.0.2&init=false&interface=com.service.DemoService&
+     *                   metadata-type=remote&methods=helloWorld&pid=14356&qos.enable=false&register.ip=10.1.1.1&
+     *                   release=2.7.7&revision=1.0.0&side=consumer&sticky=false&timeout=60000&timestamp=1626770103446&version=3.0.0
+     * @param invocation 服务rpc调用相关参数信息
+     * @return Invoker<T>
+     */
     protected abstract <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation);
 
 

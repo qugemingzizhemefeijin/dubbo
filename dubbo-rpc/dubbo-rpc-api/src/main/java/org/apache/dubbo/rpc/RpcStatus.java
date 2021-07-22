@@ -40,6 +40,9 @@ public class RpcStatus {
 
     private final ConcurrentMap<String, Object> values = new ConcurrentHashMap<String, Object>();
 
+    /**
+     * 当前方法/app的活跃数（也即还在进行的远程调用），具体看上面的see相关的类
+     */
     private final AtomicInteger active = new AtomicInteger();
     private final AtomicLong total = new AtomicLong();
     private final AtomicInteger failed = new AtomicInteger();
@@ -53,10 +56,11 @@ public class RpcStatus {
     }
 
     /**
-     * @param url
+     * @param url 消费者请求的服务URL
      * @return status
      */
     public static RpcStatus getStatus(URL url) {
+        // dubbo://127.0.0.1:20801/com.service.DemoService
         String uri = url.toIdentityString();
         return SERVICE_STATISTICS.computeIfAbsent(uri, key -> new RpcStatus());
     }
@@ -70,9 +74,14 @@ public class RpcStatus {
     }
 
     /**
-     * @param url
-     * @param methodName
-     * @return status
+     * @param url        传入的被调用服务的URL，例如：
+     *                   dubbo://127.0.0.1:20801/com.service.DemoService?actives=1&anyhost=true&application=demo-service-consumer&
+     *                   check=false&connect.timeout=50000&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&init=false&
+     *                   interface=com.service.DemoService&metadata-type=remote&methods=helloWorld,sayHello&pid=2400&qos.enable=false&
+     *                   register.ip=192.168.41.68&release=2.7.7&remote.application=demo-service=provider&retries=0&revision=3.0.0&
+     *                   helloWorld.timeout=3600000&side=consumer&sticky=false&timeout=600000&timestamp=1626676432457&version=3.0.0
+     * @param methodName 调用接口的方法名称，如：helloWorld
+     * @return RpcStatus
      */
     public static RpcStatus getStatus(URL url, String methodName) {
         String uri = url.toIdentityString();
@@ -123,9 +132,9 @@ public class RpcStatus {
     }
 
     /**
-     * @param url
-     * @param elapsed
-     * @param succeeded
+     * @param url       消费端的调用服务的URL，具体描述是调用接口的方法，超时，协议等等信息
+     * @param elapsed   调用耗时，毫秒
+     * @param succeeded 是否调用成功
      */
     public static void endCount(URL url, String methodName, long elapsed, boolean succeeded) {
         endCount(getStatus(url), elapsed, succeeded);
