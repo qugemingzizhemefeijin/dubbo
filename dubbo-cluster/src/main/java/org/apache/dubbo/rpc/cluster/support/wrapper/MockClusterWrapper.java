@@ -22,19 +22,29 @@ import org.apache.dubbo.rpc.cluster.Cluster;
 import org.apache.dubbo.rpc.cluster.Directory;
 
 /**
- * mock impl
+ * Cluster 接口有两条继承线：
+ * 一条线是 AbstractCluster 抽象类，这条继承线涉及的全部 Cluster 实现类；
+ * 另一条线是 MockClusterWrapper 这条线。
+ * <br><br>
+ * MockClusterWrapper 是 Cluster 对象的包装类，MockClusterWrapper 类会对 Cluster 进行包装，
+ * 负责创建 MockClusterInvoker 对象，是 Dubbo Mock 机制的入口。
  *
  */
 public class MockClusterWrapper implements Cluster {
 
     private Cluster cluster;
 
+    /**
+     * Wrapper类都会有一个拷贝构造函数
+     * @param cluster Cluster
+     */
     public MockClusterWrapper(Cluster cluster) {
         this.cluster = cluster;
     }
 
     @Override
     public <T> Invoker<T> join(Directory<T> directory) throws RpcException {
+        // 用MockClusterInvoker进行包装
         return new MockClusterInvoker<T>(directory,
                 this.cluster.join(directory));
     }

@@ -47,6 +47,15 @@ import static org.apache.dubbo.rpc.Constants.RETURN_KEY;
 import static org.apache.dubbo.rpc.Constants.RETURN_PREFIX;
 import static org.apache.dubbo.rpc.Constants.THROW_PREFIX;
 
+/**
+ * 针对 mock 参数进行的分类处理具体有下面三条分支：
+ * <ol>
+ *     <li>mock 参数以 return 开头：直接返回 mock 参数指定的固定值，例如，empty、null、true、false、json 等。mock 参数中指定的固定返回值将会由 parseMockValue() 方法进行解析。</li>
+ *     <li>mock 参数以 throw 开头：直接抛出异常。如果在 mock 参数中没有指定异常类型，则抛出 RpcException，否则抛出指定的 Exception 类型。</li>
+ *     <li>mock 参数为 true 或 default 时，会查找服务接口对应的 Mock 实现；如果是其他值，则直接作为服务接口的 Mock 实现。拿到 Mock 实现之后，转换成 Invoker 进行调用。</li>
+ * </ol>
+ * @param <T>
+ */
 final public class MockInvoker<T> implements Invoker<T> {
     private final static ProxyFactory PROXY_FACTORY = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
     private final static Map<String, Invoker<?>> MOCK_MAP = new ConcurrentHashMap<String, Invoker<?>>();
@@ -100,31 +109,42 @@ final public class MockInvoker<T> implements Invoker<T> {
             ((RpcInvocation) invocation).setInvoker(this);
         }
 
+        // 获取mock值(会从URL中的methodName.mock参数或mock参数获取)
         String mock = getUrl().getMethodParameter(invocation.getMethodName(),MOCK_KEY);
 
         if (StringUtils.isBlank(mock)) {
+            // 没有配置mock值，直接抛出异常
             throw new RpcException(new IllegalAccessException("mock can not be null. url :" + url));
         }
+        // mock值进行处理，去除"force:"、"fail:"前缀等
         mock = normalizeMock(URL.decode(mock));
+        // mock值以return开头
         if (mock.startsWith(RETURN_PREFIX)) {
             mock = mock.substring(RETURN_PREFIX.length()).trim();
             try {
+                // 获取响应结果的类型
                 Type[] returnTypes = RpcUtils.getReturnTypes(invocation);
+                // 根据结果类型，对mock值中结果值进行转换
                 Object value = parseMockValue(mock, returnTypes);
+                // 将固定的mock值设置到Result中
                 return AsyncRpcResult.newDefaultAsyncResult(value, invocation);
             } catch (Exception ew) {
                 throw new RpcException("mock return invoke error. method :" + invocation.getMethodName()
                         + ", mock:" + mock + ", url: " + url, ew);
             }
+        // mock值以throw开头
         } else if (mock.startsWith(THROW_PREFIX)) {
             mock = mock.substring(THROW_PREFIX.length()).trim();
             if (StringUtils.isBlank(mock)) {
+                // 未指定异常类型，直接抛出RpcException
                 throw new RpcException("mocked exception for service degradation.");
             } else { // user customized class
+                // 抛出自定义异常
                 Throwable t = getThrowable(mock);
                 throw new RpcException(RpcException.BIZ_EXCEPTION, t);
             }
         } else { //impl mock
+            // 执行mockService得到mock结果
             try {
                 Invoker<T> invoker = getInvoker(mock);
                 return invoker.invoke(invocation);
@@ -157,23 +177,35 @@ final public class MockInvoker<T> implements Invoker<T> {
 
     @SuppressWarnings("unchecked")
     private Invoker<T> getInvoker(String mockService) {
+        // 尝试从MOCK_MAP集合中获取对应的Invoker对象
         Invoker<T> invoker = (Invoker<T>) MOCK_MAP.get(mockService);
         if (invoker != null) {
             return invoker;
         }
-
+        // 根据serviceType查找mock的实现类
         Class<T> serviceType = (Class<T>) ReflectUtils.forName(url.getServiceInterface());
         T mockObject = (T) getMockObject(mockService, serviceType);
+        // 创建Invoker对象
         invoker = PROXY_FACTORY.getInvoker(mockObject, serviceType, url);
         if (MOCK_MAP.size() < 10000) {
+            // 写入缓存
             MOCK_MAP.put(mockService, invoker);
         }
         return invoker;
     }
 
+    /**
+     * 在 getMockObject() 方法中会检查 mockService 参数是否为 true 或 default，如果是的话，
+     * 则在服务接口后添加 Mock 字符串，作为服务接口的 Mock 实现；
+     * 如果不是的话，则直接将 mockService 实现作为服务接口的 Mock 实现。
+     * @param mockService mock名称
+     * @param serviceType 获取Mock的接口类
+     * @return Object
+     */
     @SuppressWarnings("unchecked")
     public static Object getMockObject(String mockService, Class serviceType) {
         boolean isDefault = ConfigUtils.isDefault(mockService);
+        // 如果mock为true或default值，会在服务接口后添加Mock字符串，得到对应的实现类名称，并进行实例化
         if (isDefault) {
             mockService = serviceType.getName() + "Mock";
         }
@@ -196,6 +228,7 @@ final public class MockInvoker<T> implements Invoker<T> {
                     + serviceType.getName(), e);
         }
         if (mockClass == null || !serviceType.isAssignableFrom(mockClass)) {
+            // 检查mockClass是否继承serviceType接口
             throw new IllegalStateException("The mock class " + mockClass.getName() +
                     " not implement interface " + serviceType.getName());
         }
