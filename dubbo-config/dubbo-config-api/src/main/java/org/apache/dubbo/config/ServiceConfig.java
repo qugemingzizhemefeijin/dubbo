@@ -475,7 +475,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         if (ConfigUtils.isEmpty(token) && provider != null) {
             token = provider.getToken();
         }
-
+        // 是否有token配置 将token配置到map
         if (!ConfigUtils.isEmpty(token)) {
             if (ConfigUtils.isDefault(token)) {
                 map.put(TOKEN_KEY, UUID.randomUUID().toString());

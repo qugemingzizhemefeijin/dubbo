@@ -34,6 +34,14 @@ import org.apache.dubbo.common.extension.SPI;
  *    remote call configured caching type's (e.g. Thread Local, JCache etc) implementation invoke method gets called.
  * </pre>
  * Filter. (SPI, Singleton, ThreadSafe)
+ * <br><br>
+ * <p>在ProtocolFilterWrapper 类的 buildInvokerChain() 方法中，会加载 Dubbo 以及应用程序提供的 Filter 实现类，
+ * 然后构造成 Filter 链，最后通过装饰者模式在原有 Invoker 对象基础上添加执行 Filter 链的逻辑。
+ * <br><br>
+ * <p>Filter 链的组装逻辑设计得非常灵活，其中可以通过“-”配置手动剔除 Dubbo 原生提供的、默认加载的 Filter，
+ * 通过“default”来代替 Dubbo 原生提供的 Filter，这样就可以很好地控制哪些 Filter 要加载，以及 Filter 的真正执行顺序。
+ * <br><br>
+ * <p>Filter 是扩展 Dubbo 功能的首选方案，并且 Dubbo 自身也提供了非常多的 Filter 实现来扩展自身功能。
  *
  * @see org.apache.dubbo.rpc.filter.GenericFilter
  * @see org.apache.dubbo.rpc.filter.EchoFilter

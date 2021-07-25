@@ -165,17 +165,31 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         }
     }
 
+    /**
+     * 计算超时时间并且传递给Provider。当请求到达 Provider 时，ContextFilter 会根据 Invocation
+     * 中的 attachment 恢复 RpcContext 的attachment，
+     * 其中就包含 TIMEOUT_ATTACHENT_KEY（对应的 Value 会恢复成 TimeoutCountDown 对象）
+     *
+     * @param invocation RPC接口和方法描述对象
+     * @param methodName 本次调用的方法名称
+     * @return 剩余的超时时间
+     */
     private int calculateTimeout(Invocation invocation, String methodName) {
         Object countdown = RpcContext.getContext().get(TIME_COUNTDOWN_KEY);
+        // RpcContext中没有指定TIME_COUNTDOWN_KEY，则使用timeout配置，默认1000
         int timeout = DEFAULT_TIMEOUT;
         if (countdown == null) {
+            // 获取timeout配置指定的超时时长，默认值为1秒
             timeout = (int) RpcUtils.getTimeout(getUrl(), methodName, RpcContext.getContext(), DEFAULT_TIMEOUT);
             if (getUrl().getParameter(ENABLE_TIMEOUT_COUNTDOWN_KEY, false)) {
+                // 如果开启了ENABLE_TIMEOUT_COUNTDOWN_KEY，则通过TIMEOUT_ATTACHENT_KEY将超时时间传递给Provider端
                 invocation.setObjectAttachment(TIMEOUT_ATTACHMENT_KEY, timeout); // pass timeout to remote server
             }
         } else {
+            // 当前RpcContext中已经通过TIME_COUNTDOWN_KEY指定了超时时间，则使用该值作为超时时间
             TimeoutCountDown timeoutCountDown = (TimeoutCountDown) countdown;
             timeout = (int) timeoutCountDown.timeRemaining(TimeUnit.MILLISECONDS);
+            // 将剩余超时时间放入attachment中，传递给Provider端
             invocation.setObjectAttachment(TIMEOUT_ATTACHMENT_KEY, timeout);// pass timeout to remote server
         }
         return timeout;

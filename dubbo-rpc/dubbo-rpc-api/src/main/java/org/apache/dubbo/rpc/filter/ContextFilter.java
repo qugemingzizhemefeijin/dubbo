@@ -69,6 +69,9 @@ public class ContextFilter implements Filter, Filter.Listener {
 
     private static final String TAG_KEY = "dubbo.tag";
 
+    /**
+     * 用于过滤不应该放到RpcContext的attachments属性中的URL Parameter Key
+     */
     private static final Set<String> UNLOADING_KEYS;
 
     static {
@@ -115,7 +118,7 @@ public class ContextFilter implements Filter, Filter.Listener {
         } else {
             context.setRemoteApplicationName((String) context.getAttachment(REMOTE_APPLICATION_KEY));
         }
-        // 设置超时时间
+        // 设置超时时间，读取从 org.apache.dubbo.rpc.protocol.dubbo.DubboInvoker.calculateTimeout 方法中Consumer传递过来的TIMEOUT_ATTACHMENT_KEY。
         long timeout = RpcUtils.getTimeout(invocation, -1);
         if (timeout != -1) {
             context.set(TIME_COUNTDOWN_KEY, TimeoutCountDown.newCountDown(timeout, TimeUnit.MILLISECONDS));

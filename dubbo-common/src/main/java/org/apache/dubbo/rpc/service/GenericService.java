@@ -19,21 +19,20 @@ package org.apache.dubbo.rpc.service;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Generic service interface
+ * Generic service interface 通用服务接口
  *
  * @export
  */
 public interface GenericService {
 
     /**
-     * Generic invocation
+     * Generic invocation 泛化调用
      *
-     * @param method         Method name, e.g. findPerson. If there are overridden methods, parameter info is
-     *                       required, e.g. findPerson(java.lang.String)
-     * @param parameterTypes Parameter types
-     * @param args           Arguments
-     * @return invocation return value
-     * @throws GenericException potential exception thrown from the invocation
+     * @param method         方法名，如：findPerson，如果有重载方法，需带上参数列表，如：findPerson(java.lang.String)
+     * @param parameterTypes 参数类型
+     * @param args           参数列表
+     * @return 返回值
+     * @throws GenericException 方法抛出的异常
      */
     Object $invoke(String method, String[] parameterTypes, Object[] args) throws GenericException;
 

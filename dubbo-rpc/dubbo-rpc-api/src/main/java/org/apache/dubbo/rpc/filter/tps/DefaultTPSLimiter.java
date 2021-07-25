@@ -29,6 +29,13 @@ import static org.apache.dubbo.rpc.Constants.DEFAULT_TPS_LIMIT_INTERVAL;
 /**
  * DefaultTPSLimiter is a default implementation for tps filter. It is an in memory based implementation for storing
  * tps information. It internally use
+ * <br><br>
+ * DefaultTPSLimiter 是 tps 过滤器的默认实现。它是一种基于内存的实现，用于存储 tps 信息。它内部使用。
+ * <br><br>
+ * TPSLimiter 接口中的核心是 isAllowable() 方法。
+ * 在 DefaultTPSLimiter 实现中，使用ConcurrentHashMap（stats 字段）为每个 ServiceKey 维护了一个相应的 StatItem 对象；
+ * 在 isAllowable() 方法实现中，会从 URL 中读取 tps 参数值（默认为 -1，即没有限流），对于需要限流的请求，
+ * 会从 stats 集合中获取（或创建）相应 StatItem 对象，然后调用 StatItem 对象的isAllowable() 方法判断是否被限流。
  *
  * @see org.apache.dubbo.rpc.filter.TpsLimitFilter
  */
@@ -38,16 +45,23 @@ public class DefaultTPSLimiter implements TPSLimiter {
 
     @Override
     public boolean isAllowable(URL url, Invocation invocation) {
+        // 获取配置的tps的值，获取不到则为负数
         int rate = url.getParameter(TPS_LIMIT_RATE_KEY, -1);
+        // 获取tps.interval值，默认为1分钟
+        // 这两个参数相当于控制 1分钟内 允许访问 rate 次
         long interval = url.getParameter(TPS_LIMIT_INTERVAL_KEY, DEFAULT_TPS_LIMIT_INTERVAL);
+        // 服务标识，由此可以看出限流器是针对接口，而不能应用于每个具体的方法上
         String serviceKey = url.getServiceKey();
         if (rate > 0) {
+            // 需要限流，尝试从stats集合中获取相应的StatItem对象
             StatItem statItem = stats.get(serviceKey);
             if (statItem == null) {
+                // 查询stats集合失败，则创建新的StatItem对象
                 stats.putIfAbsent(serviceKey, new StatItem(serviceKey, rate, interval));
                 statItem = stats.get(serviceKey);
             } else {
                 //rate or interval has changed, rebuild
+                // URL中参数发生变化时，会重建对应的StatItem
                 if (statItem.getRate() != rate || statItem.getInterval() != interval) {
                     stats.put(serviceKey, new StatItem(serviceKey, rate, interval));
                     statItem = stats.get(serviceKey);
@@ -55,6 +69,7 @@ public class DefaultTPSLimiter implements TPSLimiter {
             }
             return statItem.isAllowable();
         } else {
+            // 不需要限流，则从stats集合中清除相应的StatItem对象
             StatItem statItem = stats.get(serviceKey);
             if (statItem != null) {
                 stats.remove(serviceKey);

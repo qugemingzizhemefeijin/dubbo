@@ -29,12 +29,28 @@ import static org.apache.dubbo.rpc.Constants.$ECHO;
 
 /**
  * Dubbo provided default Echo echo service, which is available for all dubbo provider service interface.
+ * <br><br>
+ * EchoFilter在dubbo中用于提供回声测试功能，也就是检测服务是否可用。<br>
+ * 回声测试用于检测服务是否可用，回声测试按照正常请求流程执行，能够测试整个调用是否通畅，可用于监控。<br>
+ * 所有服务自动实现 EchoService 接口，只需将任意服务引用强制转型为 EchoService，即可使用。<br>
+ *
+ * <p>
+ * <pre>
+ * // 远程服务引用
+ * MemberService memberService = ctx.getBean("memberService");
+ * EchoService echoService = (EchoService) memberService; // 强制转型为EchoService
+ * // 回声测试可用性
+ * String status = echoService.$echo("OK");
+ * assert(status.equals("OK"));
+ *
+ * </pre>
  */
 @Activate(group = CommonConstants.PROVIDER, order = -110000)
 public class EchoFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation inv) throws RpcException {
+        // 方法名字是$echo 同时参数为1 表示是回声测试 只返回入参
         if (inv.getMethodName().equals($ECHO) && inv.getArguments() != null && inv.getArguments().length == 1) {
             return AsyncRpcResult.newDefaultAsyncResult(inv.getArguments()[0], inv);
         }

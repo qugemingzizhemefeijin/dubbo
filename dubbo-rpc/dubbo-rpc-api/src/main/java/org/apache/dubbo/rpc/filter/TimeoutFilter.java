@@ -35,6 +35,11 @@ import static org.apache.dubbo.common.constants.CommonConstants.TIME_COUNTDOWN_K
 
 /**
  * Log any invocation timeout, but don't stop server from running
+ *
+ * <p>
+ * TimeoutFilter 是 Provider 端另一个涉及超时时间的 Filter 实现，其 invoke() 方法实现比较简单，直接将请求转发给后续 Filter 处理。
+ * 在 TimeoutFilter 对 onResponse() 方法的实现中，会从 RpcContext 中读取上述 TimeoutCountDown 对象，并检查此次请求是否超时。
+ * 如果请求已经超时，则会将 AppResponse 中的结果清空，同时打印一条警告日志.
  */
 @Activate(group = CommonConstants.PROVIDER)
 public class TimeoutFilter implements Filter, Filter.Listener {
@@ -51,7 +56,9 @@ public class TimeoutFilter implements Filter, Filter.Listener {
         Object obj = RpcContext.getContext().get(TIME_COUNTDOWN_KEY);
         if (obj != null) {
             TimeoutCountDown countDown = (TimeoutCountDown) obj;
+            // 检查结果是否超时
             if (countDown.isExpired()) {
+                // 清理结果信息，包括结果，异常，附加信息都清理掉
                 ((AppResponse) appResponse).clear(); // clear response in case of timeout.
                 if (logger.isWarnEnabled()) {
                     logger.warn("invoke timed out. method: " + invocation.getMethodName() + " arguments: " +
