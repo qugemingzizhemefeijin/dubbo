@@ -45,9 +45,9 @@ import static org.apache.dubbo.rpc.Constants.MERGER_KEY;
 
 /**
  *
- * Mergeable可以自动把多个节点请求得到的结果进行合并。dubbo:reference标签中通过merger="true"开启，合并时可以通过group="*"属性指定需要合并哪些分组的结果。
+ * Mergeable可以自动把多个节点请求得到的结果进行合并。dubbo:reference标签中通过merger="true"开启，
+ * 合并时可以通过group="*"属性指定需要合并哪些分组的结果。
  *
- * @param <T>
  */
 @SuppressWarnings("unchecked")
 public class MergeableClusterInvoker<T> extends AbstractClusterInvoker<T> {

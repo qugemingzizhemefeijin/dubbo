@@ -27,13 +27,19 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * SetMerger、ListMerger 和 MapMerger 是针对 Set 、List 和 Map 返回值的 Merger 实现，
+ * 它们会将多个 Set（或 List、Map）集合合并成一个 Set（或 List、Map）集合，核心原理与 ArrayMerger 的实现类似。
+ */
 public class ListMerger implements Merger<List<?>> {
 
     @Override
     public List<Object> merge(List<?>... items) {
         if (ArrayUtils.isEmpty(items)) {
+            // 空结果集时，这就返回空List集合
             return Collections.emptyList();
         }
+        // 通过Stream API将传入的所有List集合拍平成一个List集合并返回
         return Stream.of(items).filter(Objects::nonNull)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());

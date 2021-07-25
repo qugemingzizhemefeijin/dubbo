@@ -25,13 +25,19 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+/**
+ * SetMerger、ListMerger 和 MapMerger 是针对 Set 、List 和 Map 返回值的 Merger 实现，
+ * 它们会将多个 Set（或 List、Map）集合合并成一个 Set（或 List、Map）集合，核心原理与 ArrayMerger 的实现类似。
+ */
 public class SetMerger implements Merger<Set<?>> {
 
     @Override
     public Set<Object> merge(Set<?>... items) {
         if (ArrayUtils.isEmpty(items)) {
+            // 空结果集时，这就返回空Set集合
             return Collections.emptySet();
         }
+        // 创建一个新的HashSet集合，传入的所有Set集合都添加到result中
         Set<Object> result = new HashSet<Object>();
         Stream.of(items).filter(Objects::nonNull).forEach(result::addAll);
         return result;
