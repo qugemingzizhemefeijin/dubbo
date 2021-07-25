@@ -50,23 +50,28 @@ public class DubboBootstrapApplicationListener extends OnceApplicationContextEve
 
     public DubboBootstrapApplicationListener(ApplicationContext applicationContext) {
         super(applicationContext);
+        // 初始化DubboBootstrap对象
         this.dubboBootstrap = DubboBootstrap.getInstance();
         DubboBootstrapStartStopListenerSpringAdapter.applicationContext = applicationContext;
     }
 
     @Override
     public void onApplicationContextEvent(ApplicationContextEvent event) {
+        // 监听ContextRefreshedEvent事件和ContextClosedEvent事件
         if (DubboBootstrapStartStopListenerSpringAdapter.applicationContext == null) {
             DubboBootstrapStartStopListenerSpringAdapter.applicationContext = event.getApplicationContext();
         }
         if (event instanceof ContextRefreshedEvent) {
+            // ApplicationContext被初始化或者更新时发布。也可以在调用ConfigurableApplicationContext 接口中的refresh()方法时被触发。
             onContextRefreshedEvent((ContextRefreshedEvent) event);
         } else if (event instanceof ContextClosedEvent) {
+            // 当ApplicationContext被关闭时触发该事件。容器被关闭时，其管理的所有单例Bean都被销毁。
             onContextClosedEvent((ContextClosedEvent) event);
         }
     }
 
     private void onContextRefreshedEvent(ContextRefreshedEvent event) {
+        // 启动DubboBootstrap
         dubboBootstrap.start();
     }
 

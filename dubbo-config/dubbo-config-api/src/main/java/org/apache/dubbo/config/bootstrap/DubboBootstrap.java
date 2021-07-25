@@ -121,6 +121,14 @@ import static org.apache.dubbo.remoting.Constants.CLIENT_KEY;
  * Get singleton instance by calling static method {@link #getInstance()}.
  * Designed as singleton because some classes inside Dubbo, such as ExtensionLoader, are designed only for one instance per process.
  *
+ * <p>
+ * 此类设计为单例模式。Dubbo Provider启动类。
+ *
+ * <p>
+ * 不仅是直接通过 API 启动 Provider 的方式会使用到 DubboBootstrap，
+ * 在 Spring 与 Dubbo 集成的时候也是使用 DubboBootstrap 作为服务发布入口的，
+ * 具体逻辑在 DubboBootstrapApplicationListener 这个 Spring Context 监听器中。
+ *
  * @since 2.7.5
  */
 public class DubboBootstrap {
@@ -864,34 +872,42 @@ public class DubboBootstrap {
     }
 
     /**
-     * Start the bootstrap
+     * 启动程序入口，整个 Provider 节点的启动入口是 DubboBootstrap.start() 方法，在该方法中会执行一些初始化操作，以及一些状态控制字段的更新。
      */
     public DubboBootstrap start() {
+        // CAS操作，保证启动一次
         if (started.compareAndSet(false, true)) {
+            // 用于判断当前节点是否已经启动完毕，在后面的Dubbo QoS中会使用到该字段
             ready.set(false);
+            // 初始化一些基础组件，例如，配置中心相关组件、事件监听、元数据相关组件
             initialize();
             if (logger.isInfoEnabled()) {
                 logger.info(NAME + " is starting...");
             }
             // 1. export Dubbo Services
+            // 重点：发布服务
             exportServices();
 
             // Not only provider register
             if (!isOnlyRegisterProvider() || hasExportedServices()) {
                 // 2. export MetadataService
+                // 用于暴露本地元数据服务
                 exportMetadataService();
                 //3. Register the local ServiceInstance if required
+                // 用于将服务实例注册到专用于服务发现的注册中心
                 registerServiceInstance();
             }
-
+            // 处理Consumer的ReferenceConfig
             referServices();
             if (asyncExportingFutures.size() > 0) {
+                // 异步发布服务，会启动一个线程监听发布是否完成，完成之后会将ready设置为true
                 new Thread(() -> {
                     try {
                         this.awaitFinish();
                     } catch (Exception e) {
                         logger.warn(NAME + " exportAsync occurred an exception.");
                     }
+                    // 将ready设置为true
                     ready.set(true);
                     if (logger.isInfoEnabled()) {
                         logger.info(NAME + " is ready.");
@@ -900,6 +916,7 @@ public class DubboBootstrap {
                     exts.getSupportedExtensionInstances().forEach(ext -> ext.onStart(this));
                 }).start();
             } else {
+                // 同步发布服务成功之后，会将ready设置为true
                 ready.set(true);
                 if (logger.isInfoEnabled()) {
                     logger.info(NAME + " is ready.");
@@ -1048,12 +1065,17 @@ public class DubboBootstrap {
         }
     }
 
+    /**
+     * 发布服务
+     */
     private void exportServices() {
+        // 从配置管理器中获取到所有的要暴露的服务配置，一个接口类对应一个ServiceConfigBase实例
         configManager.getServices().forEach(sc -> {
             // TODO, compatible with ServiceConfig.export()
             ServiceConfig serviceConfig = (ServiceConfig) sc;
             serviceConfig.setBootstrap(this);
 
+            // 异步模式，获取一个线程池来异步执行服务发布逻辑
             if (exportAsync) {
                 ExecutorService executor = executorRepository.getServiceExporterExecutor();
                 Future<?> future = executor.submit(() -> {
@@ -1063,8 +1085,10 @@ public class DubboBootstrap {
                         logger.error("export async catch error : " + t.getMessage(), t);
                     }
                 });
+                // 记录异步发布的Future
                 asyncExportingFutures.add(future);
             } else {
+                // 同步发布
                 exportService(serviceConfig);
             }
         });

@@ -177,7 +177,25 @@ public class ConfigValidationUtils {
 
     public static final String IPV6_END_MARK = "]";
 
-
+    /**
+     * 加载注册中心信息，即将 RegistryConfig 配置解析成 registryUrl。<br>
+     * 无论是使用 XML、Annotation，还是 API 配置方式，都可以配置多个注册中心地址，一个服务接口可以同时注册在多个不同的注册中心。<br>
+     * 所以返回的是List<br>
+     * <pre>
+     * &lt;dubbo:registry address="zookeeper://127.0.0.1:2181" protocol="zookeeper" port="2181" /&gt;
+     * 转换为：
+     * // path是Zookeeper的地址
+     * registry://127.0.0.1:2181/org.apache.dubbo.registry.RegistryService?
+     * application=dubbo-demo-api-provider
+     * &dubbo=2.0.2
+     * &pid=9405
+     * &registry=zookeeper // 使用的注册中心是Zookeeper
+     * &timestamp=1600307343086
+     * </pre>
+     * @param interfaceConfig 服务接口配置对象
+     * @param provider        是否为Provider端
+     * @return List<URL>
+     */
     public static List<URL> loadRegistries(AbstractInterfaceConfig interfaceConfig, boolean provider) {
         // check && override if necessary
         List<URL> registryList = new ArrayList<URL>();
