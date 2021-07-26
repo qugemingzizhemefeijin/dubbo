@@ -129,6 +129,10 @@ import static org.apache.dubbo.remoting.Constants.CLIENT_KEY;
  * 在 Spring 与 Dubbo 集成的时候也是使用 DubboBootstrap 作为服务发布入口的，
  * 具体逻辑在 DubboBootstrapApplicationListener 这个 Spring Context 监听器中。
  *
+ * <p>
+ * DubboBootstrap.start() 方法的核心流程，其中除了会调用 exportServices() 方法完成服务发布之外，还会调用 referServices() 方法完成服务引用。<br>
+ * 在 DubboBootstrap.referServices() 方法中，会从 ConfigManager 中获取所有 ReferenceConfig 列表，并根据 ReferenceConfig 获取对应的代理对象。
+ *
  * @since 2.7.5
  */
 public class DubboBootstrap {
@@ -394,6 +398,11 @@ public class DubboBootstrap {
         return reference(builder.build());
     }
 
+    /**
+     * 新建的 ReferenceConfig 对象会通过 DubboBootstrap.reference() 方法添加到 ConfigManager 中进行管理
+     * @param referenceConfig 需要被管理的ReferenceConfig
+     * @return DubboBootstrap
+     */
     public DubboBootstrap reference(ReferenceConfig<?> referenceConfig) {
         configManager.addReference(referenceConfig);
         return this;
@@ -1121,17 +1130,29 @@ public class DubboBootstrap {
         exportedServices.clear();
     }
 
+    /**
+     * <p>处理服务引用
+     * <p>Dubbo 服务引用的时机有两个，
+     * <p>第一个是在 Spring 容器调用 ReferenceBean 的 afterPropertiesSet 方法时引用服务，
+     * <p>第二个是在 ReferenceBean 对应的服务被注入到其他类中时引用。
+     * <p>这两个引用服务的时机区别在于，
+     * <p>第一个是饿汉式的，第二个是懒汉式的。默认情况下，Dubbo 使用懒汉式引用服务。
+     */
     private void referServices() {
         if (cache == null) {
+            // 初始ReferenceConfigCache
+            // 在 ReferenceConfigCache 的 CACHE_HOLDER 集合中添加一个 Key 为“DEFAULT”的 ReferenceConfigCache 对象
+            // （使用默认的 KeyGenerator 实现），它将作为默认的 ReferenceConfigCache 对象。
             cache = ReferenceConfigCache.getCache();
         }
-
+        // 遍历ReferenceConfig列表
         configManager.getReferences().forEach(rc -> {
             // TODO, compatible with  ReferenceConfig.refer()
             ReferenceConfig referenceConfig = (ReferenceConfig) rc;
             referenceConfig.setBootstrap(this);
-
+            // 检测ReferenceConfig是否已经初始化
             if (rc.shouldInit()) {
+                // 异步
                 if (referAsync) {
                     CompletableFuture<Object> future = ScheduledCompletableFuture.submit(
                             executorRepository.getServiceExporterExecutor(),

@@ -492,29 +492,38 @@ public class RegistryProtocol implements Protocol {
         return key;
     }
 
+    // 服务引用
     @Override
     @SuppressWarnings("unchecked")
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
+        // 从URL中获取注册中心的URL
         url = getRegistryUrl(url);
+        // 获取Registry实例，这里的RegistryFactory对象是通过Dubbo SPI的自动装载机制注入的
         Registry registry = getRegistry(url);
         if (RegistryService.class.equals(type)) {
             return proxyFactory.getInvoker((T) registry, type, url);
         }
 
         // group="a,b" or group="*"
+        // 从注册中心URL的refer参数中获取此次服务引用的一些参数，其中就包括group
         Map<String, String> qs = StringUtils.parseQueryString(url.getParameterAndDecoded(REFER_KEY));
         String group = qs.get(GROUP_KEY);
         if (group != null && group.length() > 0) {
             if ((COMMA_SPLIT_PATTERN.split(group)).length > 1 || "*".equals(group)) {
+                // 如果此次可以引用多个group的服务，则Cluser实现使用MergeableCluster实现，
+                // 这里的getMergeableCluster()方法就会通过Dubbo SPI方式找到MergeableCluster实例
                 return doRefer(Cluster.getCluster(MergeableCluster.NAME), registry, type, url, qs);
             }
         }
 
         Cluster cluster = Cluster.getCluster(qs.get(CLUSTER_KEY));
+        // 如果没有group参数或是只指定了一个group，则通过Cluster适配器选择Cluster实现
         return doRefer(cluster, registry, type, url, qs);
     }
 
     protected <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url, Map<String, String> parameters) {
+        // 根据 URL 初始化 RegistryDirectory 实例，然后生成 Subscribe URL 并进行注册，
+        // 之后会通过 Registry 订阅服务，最后通过 Cluster 将多个 Invoker 合并成一个 Invoker 返回给上层。
         URL consumerUrl = new URL(CONSUMER_PROTOCOL, parameters.remove(REGISTER_IP_KEY), 0, type.getName(), parameters);
         ClusterInvoker<T> migrationInvoker = getMigrationInvoker(this, cluster, registry, type, url, consumerUrl);
         return interceptInvoker(migrationInvoker, url, consumerUrl);
@@ -526,11 +535,17 @@ public class RegistryProtocol implements Protocol {
     }
 
     protected <T> Invoker<T> interceptInvoker(ClusterInvoker<T> invoker, URL url, URL consumerUrl) {
+        // 根据URL中的registry.protocol.listener参数加载相应的监听器实现
         List<RegistryProtocolListener> listeners = findRegistryProtocolListeners(url);
         if (CollectionUtils.isEmpty(listeners)) {
             return invoker;
         }
+        // 通过 org.apache.dubbo.registry.client.migration.MigrationRuleListener.onRefer 方法调用的
+        // org.apache.dubbo.registry.client.migration.MigrationInvoker.refreshInterfaceInvoker 方法
+        // 实际最终调用的是 org.apache.dubbo.registry.integration.RegistryProtocol.getInvoker 方法
 
+        // 引入了RegistryProtocol侦听器，以使用户有机会自定义或更改导出并引用RegistryProtocol的行为。
+        // 例如：在满足某些条件时立即重新导出或重新引用。
         for (RegistryProtocolListener listener : listeners) {
             listener.onRefer(this, invoker, consumerUrl);
         }
@@ -544,6 +559,7 @@ public class RegistryProtocol implements Protocol {
 
     public <T> ClusterInvoker<T> getInvoker(Cluster cluster, Registry registry, Class<T> type, URL url) {
         // FIXME, this method is currently not used, create the right registry before enable.
+        // 创建RegistryDirectory实例
         DynamicDirectory<T> directory = new RegistryDirectory<>(type, url);
         return doCreateInvoker(directory, cluster, registry, type);
     }
@@ -561,15 +577,23 @@ public class RegistryProtocol implements Protocol {
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
         // all attributes of REFER_KEY
+        // 生成SubscribeUrl，协议为consumer，具体的参数是RegistryURL中refer参数指定的参数
         Map<String, String> parameters = new HashMap<String, String>(directory.getConsumerUrl().getParameters());
         URL urlToRegistry = new URL(CONSUMER_PROTOCOL, parameters.remove(REGISTER_IP_KEY), 0, type.getName(), parameters);
         if (directory.isShouldRegister()) {
+            // 在SubscribeUrl中添加category=consumers和check=false参数
             directory.setRegisteredConsumerUrl(urlToRegistry);
+            // 服务注册，在Zookeeper的consumers节点下，添加该Consumer对应的节点
             registry.register(directory.getRegisteredConsumerUrl());
         }
+        // 根据SubscribeUrl创建服务路由
         directory.buildRouterChain(urlToRegistry);
+        // 订阅服务，toSubscribeUrl()方法会将SubscribeUrl中category参数修改为"providers,configurators,routers"
+        // RegistryDirectory的subscribe()会通过Registry订阅服务，同时还会添加相应的监听器
         directory.subscribe(toSubscribeUrl(urlToRegistry));
 
+        // 注册中心中可能包含多个Provider，相应地，也就有多个Invoker，
+        // 这里通过前面选择的Cluster将多个Invoker对象封装成一个Invoker对象
         return (ClusterInvoker<T>) cluster.join(directory);
     }
 

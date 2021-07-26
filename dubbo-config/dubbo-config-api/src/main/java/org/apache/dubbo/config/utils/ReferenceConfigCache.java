@@ -36,6 +36,9 @@ import java.util.concurrent.ConcurrentMap;
  * for the framework which create {@link ReferenceConfigBase} frequently.
  * <p>
  * You can implement and use your own {@link ReferenceConfigBase} cache if you need use complicate strategy.
+ *
+ * <p>
+ * 为了避免底层连接泄漏造成性能问题，从 Dubbo 2.4.0 版本开始，Dubbo 提供了 ReferenceConfigCache 用于缓存 ReferenceConfig 实例。
  */
 public class ReferenceConfigCache {
     public static final String DEFAULT_NAME = "_DEFAULT_";
@@ -47,13 +50,14 @@ public class ReferenceConfigCache {
     public static final KeyGenerator DEFAULT_KEY_GENERATOR = referenceConfig -> {
         String iName = referenceConfig.getInterface();
         if (StringUtils.isBlank(iName)) {
+            // 获取服务接口名称
             Class<?> clazz = referenceConfig.getInterfaceClass();
             iName = clazz.getName();
         }
         if (StringUtils.isBlank(iName)) {
             throw new IllegalArgumentException("No interface info in ReferenceConfig" + referenceConfig);
         }
-
+        // Key的格式是group/interface:version
         StringBuilder ret = new StringBuilder();
         if (!StringUtils.isBlank(referenceConfig.getGroup())) {
             ret.append(referenceConfig.getGroup()).append("/");
@@ -65,12 +69,31 @@ public class ReferenceConfigCache {
         return ret.toString();
     };
 
+    /**
+     *  默认情况 Key 是 DEFAULT_KEY_GENERATOR 变量，Value 是一个 ReferenceConfigCache 对象
+     */
     static final ConcurrentMap<String, ReferenceConfigCache> CACHE_HOLDER = new ConcurrentHashMap<String, ReferenceConfigCache>();
+
+    /**
+     * DEFAULT_NAME 的值 _DEFAULT_
+     */
     private final String name;
+
+    /**
+     * 缓存key生成的策略，默认的 KeyGenerator 实现是 ReferenceConfigCache 中的匿名内部类，其对象由 DEFAULT_KEY_GENERATOR 这个静态字段引用。
+     */
     private final KeyGenerator generator;
 
+    /**
+     * 该集合用来存储已经被处理的 ReferenceConfig 对象。
+     */
     private final ConcurrentMap<String, ReferenceConfigBase<?>> referredReferences = new ConcurrentHashMap<>();
 
+    /**
+     * 该集合用来存储服务接口的全部代理对象，其中
+     * 第一层 Key 是服务接口的类型，
+     * 第二层 Key 是 KeyGenerator 为不同服务提供方生成的 Key，Value 是服务的代理对象。
+     */
     private final ConcurrentMap<Class<?>, ConcurrentMap<String, Object>> proxies = new ConcurrentHashMap<>();
 
     private ReferenceConfigCache(String name, KeyGenerator generator) {
@@ -81,6 +104,10 @@ public class ReferenceConfigCache {
     /**
      * Get the cache use default name and {@link #DEFAULT_KEY_GENERATOR} to generate cache key.
      * Create cache if not existed yet.
+     *
+     * <p>
+     * 如果指定的key不存在，则在 CACHE_HOLDER 集合中添加一个 Key 为“_DEFAULT_”的 ReferenceConfigCache 对象
+     * （使用默认的 KeyGenerator 实现），它将作为默认的 ReferenceConfigCache 对象。
      */
     public static ReferenceConfigCache getCache() {
         return getCache(DEFAULT_NAME);
@@ -89,6 +116,13 @@ public class ReferenceConfigCache {
     /**
      * Get the cache use specified name and {@link KeyGenerator}.
      * Create cache if not existed yet.
+     *
+     * <p>
+     * 如果指定的key不存在，则在 CACHE_HOLDER 集合中添加一个 Key 为 name 的 ReferenceConfigCache 对象
+     * （使用默认的 KeyGenerator 实现）。
+     *
+     * @param name 指定缓存的名称
+     * @return ReferenceConfigCache
      */
     public static ReferenceConfigCache getCache(String name) {
         return getCache(name, DEFAULT_KEY_GENERATOR);
@@ -97,21 +131,41 @@ public class ReferenceConfigCache {
     /**
      * Get the cache use specified {@link KeyGenerator}.
      * Create cache if not existed yet.
+     *
+     * <p>
+     * 如果指定的key不存在，则在 CACHE_HOLDER 集合中添加一个 Key 为 name 的 ReferenceConfigCache 对象
+     * （使用指定的 KeyGenerator 实现）。
+     *
+     * @param name         指定缓存的名称
+     * @param keyGenerator 指定key生成的策略
+     * @return ReferenceConfigCache
+     *
      */
     public static ReferenceConfigCache getCache(String name, KeyGenerator keyGenerator) {
         return CACHE_HOLDER.computeIfAbsent(name, k -> new ReferenceConfigCache(k, keyGenerator));
     }
 
+    /**
+     * 根据 referenceConfig 创建并缓存服务提供方对应的代理对象
+     * @param referenceConfig ReferenceConfigBase对象
+     * @return T 返回缓存的服务引用代理对象
+     */
     @SuppressWarnings("unchecked")
     public <T> T get(ReferenceConfigBase<T> referenceConfig) {
+        // 生成服务提供方对应的Key
         String key = generator.generateKey(referenceConfig);
+        // 获取接口类型
         Class<?> type = referenceConfig.getInterfaceClass();
-
+        // 获取该接口对应代理对象集合
         proxies.computeIfAbsent(type, _t -> new ConcurrentHashMap<>());
 
         ConcurrentMap<String, Object> proxiesOfType = proxies.get(type);
+
+        // 根据Key获取服务提供方对应的代理对象
         proxiesOfType.computeIfAbsent(key, _k -> {
+            // 服务引用
             Object proxy = referenceConfig.get();
+            // 将ReferenceConfig记录到referredReferences集合
             referredReferences.put(key, referenceConfig);
             return proxy;
         });
