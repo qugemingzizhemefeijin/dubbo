@@ -48,13 +48,19 @@ public class DubboMonitorFactory extends AbstractMonitorFactory {
         this.proxyFactory = proxyFactory;
     }
 
+    // 这个方法是模板方法，在AbstractMonitorFactory中会调用
     @Override
     protected Monitor createMonitor(URL url) {
+        // 这里的url是在客户端启动的时候调用loadMonitor方法构造的
+        // 例如：dubbo://127.0.0.1:2181/org.apache.dubbo.monitor.MonitorService?application=consumer&dubbo=2.0.2&interface=org.apache.dubbo.monitor.MonitorService&pid=108660&qos.enable=false&register.ip=192.168.56.1&release=2.7.5&timestamp=1589616815635
+        // 要了解这段url的组成，可以看一下ConfigValidationUtils.loadMonitor方法，url里面的ip地址、端口是使用dubbo.monitor.address设置的
         URLBuilder urlBuilder = URLBuilder.from(url);
+        // 设置协议，默认是dubbo
         urlBuilder.setProtocol(url.getParameter(PROTOCOL_KEY, DUBBO_PROTOCOL));
         if (StringUtils.isEmpty(url.getPath())) {
             urlBuilder.setPath(MonitorService.class.getName());
         }
+        // filter表示访问监控中心需要经过的过滤器，默认没有过滤器
         String filter = url.getParameter(REFERENCE_FILTER_KEY);
         if (StringUtils.isEmpty(filter)) {
             filter = "";
@@ -63,8 +69,13 @@ public class DubboMonitorFactory extends AbstractMonitorFactory {
         }
         urlBuilder.addParameters(CHECK_KEY, String.valueOf(false),
                 REFERENCE_FILTER_KEY, filter + "-monitor");
+        // 引用远程服务，也就是远程的监控中心的服务，monitorInvoker相当于客户端，所有访问监控中心都是通过monitorInvoker完成。
+        // 这里也可以看到监控中心暴露的服务是MonitorService，所以入参url的path是org.apache.dubbo.monitor.MonitorService。
+        // refer方法以后在介绍客户端启动的时候说明
         Invoker<MonitorService> monitorInvoker = protocol.refer(MonitorService.class, urlBuilder.build());
+        // 创建monitorInvoker的代理
         MonitorService monitorService = proxyFactory.getProxy(monitorInvoker);
+        // 创建DubboMonitor对象
         return new DubboMonitor(monitorInvoker, monitorService);
     }
 

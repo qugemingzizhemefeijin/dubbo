@@ -774,7 +774,7 @@ public class ExtensionLoader<T> {
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
             // 3、向扩展类注入其依赖的属性， 如扩展类A又依赖了扩展类B
-            // 如果我们所需的实现里面有一些属性，那么在此处进行依赖注入，类似于springDI，
+            // 如果我们所需的实现里面有一些属性，那么在此处进行依赖注入，类似于spring DI，
             // 这里就会使用我们之前构建好的ExtensionFactory来进行依赖的类实例构建，比如扩展点里面依赖扩展点也是在此处进行依赖注入。
             injectExtension(instance);
 

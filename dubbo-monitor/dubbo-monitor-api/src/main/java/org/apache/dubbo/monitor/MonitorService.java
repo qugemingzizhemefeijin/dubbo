@@ -71,6 +71,9 @@ public interface MonitorService {
      * 1.2 add provider address parameter if it's data sent from consumer, otherwise, add source consumer's address in parameters
      * 1.3 success,failure,elapsed: record success count, failure count, and total cost for success invocations, average cost (total cost/success calls)
      *
+     * MonitorFilter收集完信息后调用collect方法，
+     * 该方法的作用是，其他对象访问完该方法可以认为统计信息已经发送给了监控中心
+     *
      * @param statistics
      */
     void collect(URL statistics);
@@ -82,6 +85,9 @@ public interface MonitorService {
      * 1.2 side=consumer,provider: decide the data from which side, both provider and consumer are returned by default
      * 1.3 default value is view=summary, to return the summarized data for the whole day. view=chart will return the URL address showing the whole day trend which is convenient for embedding in other web page
      * 1.4 date=2012-07-03: specify the date to collect the data, today is the default value
+     *
+     * 查询监控中心数据，dubbo提供了多个维度查询，在dubbo2.7.7版本中没有对该方法的调用
+     * 下面是dubbo里面对该方法的注释，解释了入参query查询规则
      *
      * @param query
      * @return statistics

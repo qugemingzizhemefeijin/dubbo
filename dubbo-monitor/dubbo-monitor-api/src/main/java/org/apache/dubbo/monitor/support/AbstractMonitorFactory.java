@@ -70,20 +70,25 @@ public abstract class AbstractMonitorFactory implements MonitorFactory {
     public Monitor getMonitor(URL url) {
         url = url.setPath(MonitorService.class.getName()).addParameter(INTERFACE_KEY, MonitorService.class.getName());
         String key = url.toServiceStringWithoutResolving();
+        // 如果两个任何一个不为空，则直接返回。
         Monitor monitor = MONITORS.get(key);
         Future<Monitor> future = FUTURES.get(key);
         if (monitor != null || future != null) {
             return monitor;
         }
 
+        // 这里如果没有创建的话，则会通过异步来调用子类的createMonitor()方法。
+        // 这里使用到了Future，逻辑就是可能会存在短暂的monitor为空的情况，估计是考虑到不要影响正常业务的使用。不然直接使用Future.get()会造成业务卡主。
         LOCK.lock();
         try {
             monitor = MONITORS.get(key);
             future = FUTURES.get(key);
+            // 第二次检查，如果两个任何一个不为空，则直接返回。
             if (monitor != null || future != null) {
                 return monitor;
             }
 
+            // 移除来创建Monitor对象
             final URL monitorUrl = url;
             final CompletableFuture<Monitor> completableFuture = CompletableFuture.supplyAsync(() -> AbstractMonitorFactory.this.createMonitor(monitorUrl));
             FUTURES.put(key, completableFuture);

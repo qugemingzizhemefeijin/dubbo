@@ -38,7 +38,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_PROTOCOL;
 
 /**
- * DubboMonitor
+ * DubboMonitor<br><br>
+ *
+ * DubboMonitor的collect方法只是将统计信息保存在了statisticsMap中，也就是保存在本地内存中。<br><br>
+ * statisticsMap的value使用的是AtomicReference对象，使用原子类可以避免并发访问时加锁。<br><br>
+ * 在DubboMonitor的构造方法中创建了定时任务，每过一段时间，会将statisticsMap的内容发送到监控中心。定时任务调用的是send方法。<br><br>
+ *
  */
 public class DubboMonitor implements Monitor {
 
@@ -65,28 +70,45 @@ public class DubboMonitor implements Monitor {
 
     private final ConcurrentMap<Statistics, AtomicReference<long[]>> statisticsMap = new ConcurrentHashMap<Statistics, AtomicReference<long[]>>();
 
+    // monitorInvoker可以简单理解为监控中心的客户端，这一版dubbo里面使用
+    // monitorService是monitorInvoker的代理对象
+    // 这两个对象本质是一样，monitorService最终也是访问monitorInvoker。
+    // 在DubboMonitor中访问监控中心使用的是monitorService
     public DubboMonitor(Invoker<MonitorService> monitorInvoker, MonitorService monitorService) {
         this.monitorInvoker = monitorInvoker;
         this.monitorService = monitorService;
         // The time interval for timer <b>scheduledExecutorService</b> to send data
+        // monitorInterval表示monitorInvoker每多长时间访问一次监控中心，默认是1分钟
+        // 该值可以通过dubbo.monitor.interval修改
         final long monitorInterval = monitorInvoker.getUrl().getPositiveParameter("interval", 60000);
         // collect timer for collecting statistics data
+        // 创建定时任务执行器，这个定时器没有使用时间轮算法，而是使用java的ScheduledExecutorService
+        // 任务执行间隔是monitorInterval指定的
         sendFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
                 // collect data
-                send();
+                send(); // 将统计的数据发送到监控中心
             } catch (Throwable t) {
                 logger.error("Unexpected error occur at send statistic, cause: " + t.getMessage(), t);
             }
         }, monitorInterval, monitorInterval, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * send方法做了三件事：
+     * <ul>
+     *     <li>1.将统计信息构造为URL对象；</li>
+     *     <li>2.将URL对象发送给监控中心；</li>
+     *     <li>3.将部分统计数据清零；</li>
+     * </ul>
+     */
     public void send() {
         if (logger.isDebugEnabled()) {
             logger.debug("Send statistics to monitor " + getUrl());
         }
 
         String timestamp = String.valueOf(System.currentTimeMillis());
+        // 遍历statisticsMap
         for (Map.Entry<Statistics, AtomicReference<long[]>> entry : statisticsMap.entrySet()) {
             // get statistics data
             Statistics statistics = entry.getKey();
@@ -105,6 +127,7 @@ public class DubboMonitor implements Monitor {
             String protocol = getUrl().getParameter(DEFAULT_PROTOCOL);
 
             // send statistics data
+            // 将10项统计信息构造为URL对象
             URL url = statistics.getUrl()
                     .addParameters(MonitorService.TIMESTAMP, timestamp,
                             MonitorService.SUCCESS, String.valueOf(success),
@@ -119,9 +142,20 @@ public class DubboMonitor implements Monitor {
                             MonitorService.MAX_CONCURRENT, String.valueOf(maxConcurrent),
                             DEFAULT_PROTOCOL, protocol
                     );
+            // 将统计信息发送到监控中心，monitorService可以认为是监控中心的客户端，
+            // 是监控中心在本地的代理对象
+            // monitorService内部会访问网络，将数据使用dubbo协议传送给监控中心
             monitorService.collect(url);
 
-            // reset
+            // 重置6项数据，这六项数据的统计时间范围是上次发送给监控中心
+            // 到这次发送给监控中心为止，每发送给监控中心后，这六项数据清零
+            // 6项数据为：
+            // 1、服务成功次数；
+            // 2、服务失败次数；
+            // 3、服务端收到请求信息总大小；
+            // 4、客户端收到返回信息的总大小；
+            // 5、服务耗时总时间；
+            // 6、作用未知
             long[] current;
             long[] update = new long[LENGTH];
             do {
@@ -147,19 +181,24 @@ public class DubboMonitor implements Monitor {
 
     @Override
     public void collect(URL url) {
+        // 从url中获取一些统计信息
         // data to collect from url
-        int success = url.getParameter(MonitorService.SUCCESS, 0);
-        int failure = url.getParameter(MonitorService.FAILURE, 0);
-        int input = url.getParameter(MonitorService.INPUT, 0);
-        int output = url.getParameter(MonitorService.OUTPUT, 0);
-        int elapsed = url.getParameter(MonitorService.ELAPSED, 0);
-        int concurrent = url.getParameter(MonitorService.CONCURRENT, 0);
+        int success = url.getParameter(MonitorService.SUCCESS, 0); // 服务是否成功，用于统计成功次数
+        int failure = url.getParameter(MonitorService.FAILURE, 0); // 服务是否失败，用于统计失败次数
+        int input = url.getParameter(MonitorService.INPUT, 0); // 服务端收到请求信息的大小，以字节为单位
+        int output = url.getParameter(MonitorService.OUTPUT, 0); // 客户端收到返回信息的大小，以字节为单位
+        int elapsed = url.getParameter(MonitorService.ELAPSED, 0); // 访问服务耗时
+        int concurrent = url.getParameter(MonitorService.CONCURRENT, 0); // 访问服务的总次数
         // init atomic reference
+        // 创建Statistics对象，该对象作为statisticsMap的key
+        // statisticsMap是DubboMonitor的属性，类型是ConcurrentHashMap<Statistics, AtomicReference<long[]>>
         Statistics statistics = new Statistics(url);
+        // reference保存各个统计信息，使用long数组存储，存储了10项信息
         AtomicReference<long[]> reference = statisticsMap.computeIfAbsent(statistics, k -> new AtomicReference<>());
         // use CompareAndSet to sum
         long[] current;
         long[] update = new long[LENGTH];
+        // 下面的代码为更新reference数组的统计信息，使用循环，直到更新成功为止
         do {
             current = reference.get();
             if (current == null) {
@@ -180,6 +219,7 @@ public class DubboMonitor implements Monitor {
                 update[3] = current[3] + output;
                 update[4] = current[4] + elapsed;
                 update[5] = (current[5] + concurrent) / 2;
+                // 下面四项信息，只统计最大值
                 update[6] = current[6] > input ? current[6] : input;
                 update[7] = current[7] > output ? current[7] : output;
                 update[8] = current[8] > elapsed ? current[8] : elapsed;

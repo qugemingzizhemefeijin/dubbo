@@ -19,7 +19,9 @@ package org.apache.dubbo.monitor;
 import org.apache.dubbo.common.Node;
 
 /**
- * Monitor. (SPI, Prototype, ThreadSafe)
+ * Monitor. (SPI, Prototype, ThreadSafe) <br><br>
+ *
+ * DubboMonitor对象是在MonitorFilter的collect方法里面创建的，因为collect方法只有在服务请求时才会被访问，因此Monitor对象的创建属于懒加载，只有在使用的时候才会创建。
  *
  * @see org.apache.dubbo.monitor.MonitorFactory#getMonitor(org.apache.dubbo.common.URL)
  */

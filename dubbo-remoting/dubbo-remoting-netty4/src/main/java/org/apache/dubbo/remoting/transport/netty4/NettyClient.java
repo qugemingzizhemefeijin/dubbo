@@ -90,34 +90,47 @@ public class NettyClient extends AbstractClient {
     @Override
     protected void doOpen() throws Throwable {
         final NettyClientHandler nettyClientHandler = new NettyClientHandler(getUrl(), this);
+        // Bootstrap是消费端启动辅助类，通过他可以方便的创建一个Netty消费端
         bootstrap = new Bootstrap();
+        // nioEventLoopGroup表示连接池中的线程数，是处理器个数+1
         bootstrap.group(EVENT_LOOP_GROUP)
+                // 是否开启tcp的链接测试，当设置该选项以后，如果在两小时内没有数据的通信时，TCP会自动发送一个活动探测数据报文
                 .option(ChannelOption.SO_KEEPALIVE, true)
+                // 低延迟发送数据
                 .option(ChannelOption.TCP_NODELAY, true)
+                // ALLOCATOR设置内存分配器，Channel收到的数据保存在该分配器分配的内存中，默认使用的是池化直接内存
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 //.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, getTimeout())
                 .channel(socketChannelClass());
 
+        // 设置调用超时毫秒数，默认值3秒，可以通过参数connect.timeout设置
         bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.max(DEFAULT_CONNECT_TIMEOUT, getConnectTimeout()));
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
 
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+                // 心跳间隔，默认是1分钟
                 int heartbeatInterval = UrlUtils.getHeartbeat(getUrl());
 
+                // 检查是否开启SSL
                 if (getUrl().getParameter(SSL_ENABLED_KEY, false)) {
                     ch.pipeline().addLast("negotiation", SslHandlerInitializer.sslClientHandler(getUrl(), nettyClientHandler));
                 }
 
                 NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec(), getUrl(), NettyClient.this);
                 ch.pipeline()//.addLast("logging",new LoggingHandler(LogLevel.INFO))//for debug
+                        // 设置解码器
                         .addLast("decoder", adapter.getDecoder())
+                        // 设置编码器
                         .addLast("encoder", adapter.getEncoder())
+                        // 设置心跳检测，默认每1分钟检测一次
                         .addLast("client-idle-handler", new IdleStateHandler(heartbeatInterval, 0, 0, MILLISECONDS))
+                        // 设置自定义处理器
                         .addLast("handler", nettyClientHandler);
 
                 String socksProxyHost = ConfigUtils.getProperty(SOCKS_PROXY_HOST);
                 if(socksProxyHost != null) {
+                    // 使用socks5代理协议
                     int socksProxyPort = Integer.parseInt(ConfigUtils.getProperty(SOCKS_PROXY_PORT, DEFAULT_SOCKS_PROXY_PORT));
                     Socks5ProxyHandler socks5ProxyHandler = new Socks5ProxyHandler(new InetSocketAddress(socksProxyHost, socksProxyPort));
                     ch.pipeline().addFirst(socks5ProxyHandler);
@@ -129,15 +142,19 @@ public class NettyClient extends AbstractClient {
     @Override
     protected void doConnect() throws Throwable {
         long start = System.currentTimeMillis();
+        // 建立与服务端的连接
         ChannelFuture future = bootstrap.connect(getConnectAddress());
         try {
+            // 用ret判断连接是否创建成功
             boolean ret = future.awaitUninterruptibly(getConnectTimeout(), MILLISECONDS);
-
+            // 下面的代码主要是判断是否连接成功，以及处理一些异常情况
             if (ret && future.isSuccess()) {
+                // 得到消费端Channel对象，在下面代码中保存该Channel对象
                 Channel newChannel = future.channel();
                 try {
                     // Close old channel
                     // copy reference
+                    // 下面代码对旧Channel对象oldChannel关闭，如果在启动的时候，oldChannel是null
                     Channel oldChannel = NettyClient.this.channel;
                     if (oldChannel != null) {
                         try {
