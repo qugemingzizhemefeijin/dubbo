@@ -57,19 +57,25 @@ public abstract class CuratorFrameworkUtils {
     }
 
     public static CuratorFramework buildCuratorFramework(URL connectionURL) throws Exception {
+        // You only need one CuratorFramework object for each ZooKeeper cluster you are connecting，CuratorFramework实例都是线程安全的
         CuratorFramework curatorFramework = CuratorFrameworkFactory.builder()
                 .connectString(connectionURL.getBackupAddress())
                 .retryPolicy(buildRetryPolicy(connectionURL))
                 .build();
         curatorFramework.start();
+        // 如果在一定时间内启动不成功就返回启动失败。参数1：最大等待时间，参数2：时间单位
         curatorFramework.blockUntilConnected(BLOCK_UNTIL_CONNECTED_WAIT.getParameterValue(connectionURL),
                 BLOCK_UNTIL_CONNECTED_UNIT.getParameterValue(connectionURL));
         return curatorFramework;
     }
 
+    // 重试策略
     public static RetryPolicy buildRetryPolicy(URL connectionURL) {
+        // 代表初始连接的等待时间
         int baseSleepTimeMs = BASE_SLEEP_TIME.getParameterValue(connectionURL);
+        // 表示最大的尝试连接次数
         int maxRetries = MAX_RETRIES.getParameterValue(connectionURL);
+        // 每次重试期间休眠的最大时间
         int getMaxSleepMs = MAX_SLEEP.getParameterValue(connectionURL);
         return new ExponentialBackoffRetry(baseSleepTimeMs, maxRetries, getMaxSleepMs);
     }

@@ -202,16 +202,20 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             logger.info("URL " + url + " will not be registered to Registry. Registry " + url + " does not accept service of this protocol type.");
             return;
         }
+        // 记录已注册的URL
         super.register(url);
+        // 将其从发起注册失败的集合中移除
         removeFailedRegistered(url);
+        // 从卸载失败的集合中移除
         removeFailedUnregistered(url);
         try {
-            // Sending a registration request to the server side
+            // Sending a registration request to the server side 调用子类的doRegister，比如ZookeeperRegistry类就是注册到zk节点
             doRegister(url);
         } catch (Exception e) {
             Throwable t = e;
 
             // If the startup detection is opened, the Exception is thrown directly.
+            // 如果开启了check，则直接抛出异常，否则加入到失败的注册集合中，会定期重试的
             boolean check = getUrl().getParameter(Constants.CHECK_KEY, true)
                     && url.getParameter(Constants.CHECK_KEY, true)
                     && !CONSUMER_PROTOCOL.equals(url.getProtocol());
@@ -225,7 +229,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 logger.error("Failed to register " + url + ", waiting for retry, cause: " + t.getMessage(), t);
             }
 
-            // Record a failed registration request to a failed list, retry regularly
+            // 将失败的注册请求记录到失败列表中，定期重试
             addFailedRegistered(url);
         }
     }
@@ -251,11 +255,14 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     @Override
     public void unregister(URL url) {
+        // 移除注册的URL
         super.unregister(url);
+        // 从失败集合中移除
         removeFailedRegistered(url);
         removeFailedUnregistered(url);
         try {
             // Sending a cancellation request to the server side
+            // 调用子类，卸载URL
             doUnregister(url);
         } catch (Exception e) {
             Throwable t = e;
@@ -275,6 +282,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 移除失败，则继续加入到失败重试集合中
             addFailedUnregistered(url);
         }
     }
@@ -296,7 +304,9 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     @Override
     public void subscribe(URL url, NotifyListener listener) {
+        // 加入到订阅集合中
         super.subscribe(url, listener);
+        // 从失败订阅集合中移除
         removeFailedSubscribed(url, listener);
         try {
             // Sending a subscription request to the server side
@@ -304,8 +314,10 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         } catch (Exception e) {
             Throwable t = e;
 
+            // 如果订阅异常，则从文件中获取URL
             List<URL> urls = getCacheUrls(url);
             if (CollectionUtils.isNotEmpty(urls)) {
+                // 加入待通知集合中
                 notify(url, listener, urls);
                 logger.error("Failed to subscribe " + url + ", Using cached list: " + urls + " from cache file: " + getUrl().getParameter(FILE_KEY, System.getProperty("user.home") + "/dubbo-registry-" + url.getHost() + ".cache") + ", cause: " + t.getMessage(), t);
             } else {
@@ -324,6 +336,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 移除失败，则加入到失败订阅集合中，定时重试
             addFailedSubscribed(url, listener);
         }
     }
@@ -416,12 +429,30 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     // ==== Template method ====
 
+    /**
+     * 将URL注册到注册中心
+     * @param url URL
+     */
     public abstract void doRegister(URL url);
 
+    /**
+     * 将当前URL从注册中心移除
+     * @param url URL
+     */
     public abstract void doUnregister(URL url);
 
+    /**
+     * 对指定的URL添加订阅监听器
+     * @param url      URL，消费端URL
+     * @param listener NotifyListener
+     */
     public abstract void doSubscribe(URL url, NotifyListener listener);
 
+    /**
+     * 移除在指定URL的订阅监听器
+     * @param url      URL，消费端URL
+     * @param listener NotifyListener
+     */
     public abstract void doUnsubscribe(URL url, NotifyListener listener);
 
     static class Holder {

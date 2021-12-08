@@ -544,6 +544,10 @@ class URL implements Serializable {
         return address.toString();
     }
 
+    /**
+     * 将自己以及backup参数后的URL加入到List<URL>列表并返回
+     * @return List<URL>
+     */
     public List<URL> getBackupUrls() {
         List<URL> urls = new ArrayList<>();
         urls.add(this);
@@ -1557,6 +1561,10 @@ class URL implements Serializable {
         return getServiceInterface();
     }
 
+    /**
+     * 获取当前 URL 中的 interface 参数值，其实就是服务的全限定名，如 com.aa.bb
+     * @return String
+     */
     public String getServiceInterface() {
         return getParameter(INTERFACE_KEY, path);
     }

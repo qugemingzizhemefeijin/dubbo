@@ -56,6 +56,7 @@ public class ZookeeperServiceDiscovery extends AbstractServiceDiscovery {
 
     private URL registryURL;
 
+    // You only need one CuratorFramework object for each ZooKeeper cluster you are connecting，CuratorFramework实例都是线程安全的
     private CuratorFramework curatorFramework;
 
     private String rootPath;

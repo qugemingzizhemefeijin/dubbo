@@ -23,6 +23,8 @@ import java.util.List;
 /**
  * RegistryService. (SPI, Prototype, ThreadSafe)
  *
+ * 这里的方法都是模板方法，比如在ZookeeperRegistry调用register的时候，会使用super.register(url)来维护订阅和注册等URL集合。
+ *
  * @see org.apache.dubbo.registry.Registry
  * @see org.apache.dubbo.registry.RegistryFactory#getRegistry(URL)
  */
