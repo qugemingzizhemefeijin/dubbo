@@ -124,6 +124,10 @@ public class NettyClient extends AbstractClient {
                         // 设置编码器
                         .addLast("encoder", adapter.getEncoder())
                         // 设置心跳检测，默认每1分钟检测一次
+                        // NettyClient创建IdleStateHandler只设置了readerIdleTime入参，表示客户端启动定时任务只检测读事件。
+                        // 定时任务的时间间隔由参数“heartbeat”指定，默认是1分钟。
+
+                        // // dubbo对超时的检测是借助Netty的IdleStateHandler完成的，一旦发生超时，则创建超时事件并交给NettyClientHandler或者NettyServerHandler处理，服务端是关闭连接，客户端是发送心跳报文继续维持连接。
                         .addLast("client-idle-handler", new IdleStateHandler(heartbeatInterval, 0, 0, MILLISECONDS))
                         // 设置自定义处理器
                         .addLast("handler", nettyClientHandler);

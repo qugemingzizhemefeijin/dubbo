@@ -39,18 +39,38 @@ import static org.apache.dubbo.common.constants.CommonConstants.DUMP_DIRECTORY;
 
 /**
  * Abort Policy.
- * Log warn info when abort.
+ * Log warn info when abort. <br><br>
+ *
+ * 在dubbo中可以通过dump.directory指定打印堆栈信息的目录，如果不设置，dubbo将堆栈信息打印到System.getProperty(“user.home”)目录下。设置dump.directory的方式可以有：<br><br>
+ * <ul>
+ *     <li>1.@Service(parameters = {“dump.directory”,"/tmp"})，这个设置只对单个的服务生效</li>
+ *     <li>2.dubbo.application.parameters[dump.directory]=/tmp，这样设置会使整个应用的所有服务都生效</li>
+ * </ul>
+ *
+ *
  */
 public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
 
     protected static final Logger logger = LoggerFactory.getLogger(AbortPolicyWithReport.class);
 
+    /**
+     * threadName可以作为日志打印的关键字，默认是Dubbo，可以通过参数“threadname”设置
+     */
     private final String threadName;
 
+    /**
+     * url是由服务参数组成的，如果是服务端创建AbortPolicyWithReport ，则url是服务端发布服务的url。如果是消费端，则url代表了消费端需要引用的远程服务url
+     */
     private final URL url;
 
+    /**
+     * 表示最后一次打印堆栈信息的事件，dubbo每10分钟打印一次
+     */
     private static volatile long lastPrintTime = 0;
 
+    /**
+     * 表示堆栈信息的打印间隔
+     */
     private static final long TEN_MINUTES_MILLS = 10 * 60 * 1000;
 
     private static final String OS_WIN_PREFIX = "win";
@@ -61,6 +81,7 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
 
     private static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd_HH:mm:ss";
 
+    // 守卫的意思
     private static Semaphore guard = new Semaphore(1);
 
     private static final String USER_HOME = System.getProperty("user.home");
@@ -80,7 +101,9 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
             e.getLargestPoolSize(),
             e.getTaskCount(), e.getCompletedTaskCount(), e.isShutdown(), e.isTerminated(), e.isTerminating(),
             url.getProtocol(), url.getIp(), url.getPort());
+        // 打印日志，其中属性theadName会打印到日志中
         logger.warn(msg);
+        // 调用打印堆栈信息的方法
         dumpJStack();
         dispatchThreadPoolExhaustedEvent(msg);
         throw new RejectedExecutionException(msg);
@@ -98,16 +121,20 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
         long now = System.currentTimeMillis();
 
         //dump every 10 minutes
+        // 一个线程池最少间隔10分钟打印一次堆栈信息
         if (now - lastPrintTime < TEN_MINUTES_MILLS) {
             return;
         }
 
+        // guard是信号量，同时只能一个线程打印堆栈
         if (!guard.tryAcquire()) {
             return;
         }
 
         ExecutorService pool = Executors.newSingleThreadExecutor();
+        // 使用java原生线程池打印堆栈信息，这个线程池中只有一个线程，用完就关闭
         pool.execute(() -> {
+            // 获得的打印堆栈信息文件的目录
             String dumpPath = getDumpPath();
 
             SimpleDateFormat sdf;
@@ -115,6 +142,7 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
             String os = System.getProperty(OS_NAME_KEY).toLowerCase();
 
             // window system don't support ":" in file name
+            // 不同系统的时间格式不同
             if (os.contains(OS_WIN_PREFIX)) {
                 sdf = new SimpleDateFormat(WIN_DATETIME_FORMAT);
             } else {
@@ -123,18 +151,21 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
 
             String dateStr = sdf.format(new Date());
             //try-with-resources
+            // 打印的文件名为：Dubbo_JStack.log.时间，其中时间到秒
             try (FileOutputStream jStackStream = new FileOutputStream(
                 new File(dumpPath, "Dubbo_JStack.log" + "." + dateStr))) {
+                // 使用JVMUtil打印，代码见下方
                 JVMUtil.jstack(jStackStream);
             } catch (Throwable t) {
                 logger.error("dump jStack error", t);
             } finally {
                 guard.release();
             }
+            // 记录最后一次打印时间
             lastPrintTime = System.currentTimeMillis();
         });
         //must shutdown thread pool ,if not will lead to OOM
-        pool.shutdown();
+        pool.shutdown(); // 关闭线程池
 
     }
 

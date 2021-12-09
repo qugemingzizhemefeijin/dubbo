@@ -24,13 +24,18 @@ import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 
 public class JVMUtil {
+
     public static void jstack(OutputStream stream) throws Exception {
+        // 通过ThreadMXBean获得线程信息
         ThreadMXBean threadMxBean = ManagementFactory.getThreadMXBean();
+        // dumpAllThreads方法的两个入参true表示需要获取锁定的监视器和锁定的同步器
         for (ThreadInfo threadInfo : threadMxBean.dumpAllThreads(true, true)) {
             stream.write(getThreadDumpString(threadInfo).getBytes());
         }
     }
 
+    // getThreadDumpString定义了堆栈的打印格式，
+    // 其格式和java自身打印的类似
     private static String getThreadDumpString(ThreadInfo threadInfo) {
         StringBuilder sb = new StringBuilder("\"" + threadInfo.getThreadName() + "\"" +
                 " Id=" + threadInfo.getThreadId() + " " +

@@ -80,12 +80,14 @@ public abstract class AbstractTimerTask implements TimerTask {
     @Override
     public void run(Timeout timeout) throws Exception {
         Collection<Channel> c = channelProvider.getChannels();
+        // 遍历连接某一服务端的所有连接
         for (Channel channel : c) {
             if (channel.isClosed()) {
                 continue;
             }
             doTask(channel);
         }
+        // 创建定时任务用于下次检测超时重连，定时任务每次执行完都需要重新创建
         reput(timeout, tick);
     }
 

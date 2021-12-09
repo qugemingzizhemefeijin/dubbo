@@ -135,6 +135,16 @@ public class NettyServer extends AbstractServer implements RemotingServer {
                                 // 设置编码器
                                 .addLast("encoder", adapter.getEncoder())
                                 // 设置心跳检测处理器
+                                // readerIdleTime：读空闲超时检测定时任务会在每readerIdleTime时间内启动一次，检测在readerIdleTime内是否发生过读事件，如果没有发生过，则触发读超时事件READER_IDLE_STATE_EVENT，并将超时事件交给NettyClientHandler处理。如果为0，则不创建定时任务。
+                                // writerIdleTime：与readerIdleTime作用类似，只不过该参数定义的是写事件。
+                                // allIdleTime：同时检测读事件和写事件，如果在allIdleTime时间内即没有发生过读事件，也没有发生过写事件，则触发超时事件ALL_IDLE_STATE_EVENT
+                                // unit：表示前面三个参数的单位，就上面代码来说，表示的是毫秒
+
+                                // 服务端创建的IdleStateHandler设置了allIdleTime，所以服务端的定时任务需要检测读事件和写事件。
+                                // 定时任务的启动时间间隔是参数“heartbeat”设置值的3倍，heartbeat默认是1分钟，
+                                // 也可以通过参数“heartbeat.timeout”设置定时任务的启动时间间隔。单位都是毫秒。
+
+                                // dubbo对超时的检测是借助Netty的IdleStateHandler完成的，一旦发生超时，则创建超时事件并交给NettyClientHandler或者NettyServerHandler处理，服务端是关闭连接，客户端是发送心跳报文继续维持连接。
                                 .addLast("server-idle-handler", new IdleStateHandler(0, 0, idleTimeout, MILLISECONDS))
                                 // 设置自定义处理器，该处理器最后通过异步线程调用到真正提供服务的对象上
                                 .addLast("handler", nettyServerHandler);
