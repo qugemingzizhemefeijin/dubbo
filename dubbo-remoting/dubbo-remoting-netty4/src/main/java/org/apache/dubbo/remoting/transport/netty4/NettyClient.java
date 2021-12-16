@@ -63,6 +63,9 @@ public class NettyClient extends AbstractClient {
 
     private static final String DEFAULT_SOCKS_PROXY_PORT = "1080";
 
+    /**
+     * 客户端引导类
+     */
     private Bootstrap bootstrap;
 
     /**

@@ -68,12 +68,18 @@ public class ZookeeperServiceDiscovery extends AbstractServiceDiscovery {
      */
     private final Map<String, ZookeeperServiceDiscoveryChangeWatcher> watcherCaches = new ConcurrentHashMap<>();
 
+    // 建立与zk的连接，设置数据存储的根目录，设置本对象监听事件ServiceInstancesChangedEvent。
     @Override
     public void initialize(URL registryURL) throws Exception {
         this.registryURL = registryURL;
+        // 使用CuratorFramework连接zk
         this.curatorFramework = buildCuratorFramework(registryURL);
+        // 获取zk的根路径，自省服务发现使用的数据存储在该目录下。
+        // 默认根路径是/services，可以通过rootPath参数修改根路径。
         this.rootPath = ROOT_PATH.getParameterValue(registryURL);
+        // 创建ServiceDiscoveryImpl对象，ServiceDiscoveryImpl是Curator提供的
         this.serviceDiscovery = buildServiceDiscovery(curatorFramework, rootPath);
+        // 启动ServiceDiscoveryImpl
         this.serviceDiscovery.start();
     }
 

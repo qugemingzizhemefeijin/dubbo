@@ -44,9 +44,20 @@ import static org.apache.dubbo.common.constants.CommonConstants.THREAD_NAME_KEY;
  */
 public abstract class AbstractClient extends AbstractEndpoint implements Client {
 
+    /**
+     * 客户端线程名称
+     */
     protected static final String CLIENT_THREAD_POOL_NAME = "DubboClientHandler";
     private static final Logger logger = LoggerFactory.getLogger(AbstractClient.class);
+
+    /**
+     * 客户端连接服务端独占锁，保证一个客户端同时只会一个线程在执行连接动作
+     */
     private final Lock connectLock = new ReentrantLock();
+
+    /**
+     * 未连接通道时是否需要重新连接
+     */
     private final boolean needReconnect;
     //issue-7054:Consumer's executor is sharing globally.
     protected volatile ExecutorService executor;

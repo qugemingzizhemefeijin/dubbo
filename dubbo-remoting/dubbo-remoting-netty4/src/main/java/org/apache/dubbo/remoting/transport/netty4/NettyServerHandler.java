@@ -66,10 +66,13 @@ public class NettyServerHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        // 获得通道
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
+        // 如果通道不为空，则加入集合中
         if (channel != null) {
             channels.put(NetUtils.toAddressString((InetSocketAddress) ctx.channel().remoteAddress()), channel);
         }
+        // 处理连接时间
         handler.connected(channel);
 
         if (logger.isInfoEnabled()) {

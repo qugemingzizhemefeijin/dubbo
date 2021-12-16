@@ -49,12 +49,19 @@ public class StandardMetadataServiceURLBuilder implements MetadataServiceURLBuil
     /**
      * Build the {@link URL urls} from {@link ServiceInstance#getMetadata() the metadata} of {@link ServiceInstance}
      *
+     * 该方法用于创建连接服务端的URL
+     *
      * @param serviceInstance {@link ServiceInstance}
      * @return the not-null {@link List}
      */
     @Override
     public List<URL> build(ServiceInstance serviceInstance) {
-
+        // getMetadataServiceURLsParams方法从入参的metadata属性中查找
+        // key=dubbo.metadata-service.url-params的value值，
+        // 根据value生成了paramsMap，value里面记录的是服务端发布的MetadataService服务信息
+        // 其中包括了MetadataService服务发布的端口。
+        // key=dubbo.metadata-service.url-params的value值是在
+        // CustomizableServiceInstanceListener监听到事件ServiceInstancePreRegisteredEvent之后，调用MetadataServiceURLParamsMetadataCustomizer添加到metadata中的。
         Map<String, Map<String, String>> paramsMap = getMetadataServiceURLsParams(serviceInstance);
 
         List<URL> urls = new ArrayList<>(paramsMap.size());
@@ -69,7 +76,7 @@ public class StandardMetadataServiceURLBuilder implements MetadataServiceURLBuil
             int port = Integer.parseInt(params.get(PORT_KEY));
             URLBuilder urlBuilder = new URLBuilder()
                     .setHost(host)
-                    .setPort(port)
+                    .setPort(port) // 设置MetadataService服务的端口
                     .setProtocol(protocol)
                     .setPath(MetadataService.class.getName())
                     .addParameter(TIMEOUT_KEY, ConfigurationUtils.get(METADATA_PROXY_TIMEOUT_KEY, DEFAULT_METADATA_TIMEOUT_VALUE))

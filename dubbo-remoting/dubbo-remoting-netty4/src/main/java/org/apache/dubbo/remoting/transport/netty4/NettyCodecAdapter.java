@@ -35,14 +35,29 @@ import java.util.List;
  */
 final public class NettyCodecAdapter {
 
+    /**
+     * 编码器
+     */
     private final ChannelHandler encoder = new InternalEncoder();
 
+    /**
+     * 解码器
+     */
     private final ChannelHandler decoder = new InternalDecoder();
 
+    /**
+     * 编解码器，这个是编解码Dubbo的通信协议的
+     */
     private final Codec2 codec;
 
+    /**
+     * URL
+     */
     private final URL url;
 
+    /**
+     * Channel处理器
+     */
     private final org.apache.dubbo.remoting.ChannelHandler handler;
 
     public NettyCodecAdapter(Codec2 codec, URL url, org.apache.dubbo.remoting.ChannelHandler handler) {
@@ -59,30 +74,43 @@ final public class NettyCodecAdapter {
         return decoder;
     }
 
+    /**
+     * 继承Netty的编码器
+     */
     private class InternalEncoder extends MessageToByteEncoder {
 
         @Override
         protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+            // 创建缓冲区
             ChannelBuffer buffer = new NettyBackedChannelBuffer(out);
+            // 获得通道
             Channel ch = ctx.channel();
+            // 获取Dubbo Channel
             NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
+            // 对输出数据进行Dubbo编码
             codec.encode(channel, buffer, msg);
         }
     }
 
+    /**
+     * 继承Netty的解码器
+     */
     private class InternalDecoder extends ByteToMessageDecoder {
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf input, List<Object> out) throws Exception {
-
+            // 创建缓冲区
             ChannelBuffer message = new NettyBackedChannelBuffer(input);
-
+            // 获取Dubbo Channel
             NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
 
             // decode object.
             do {
+                // 记录读索引
                 int saveReaderIndex = message.readerIndex();
+                // 解码
                 Object msg = codec.decode(channel, message);
+                // 拆包
                 if (msg == Codec2.DecodeResult.NEED_MORE_INPUT) {
                     message.readerIndex(saveReaderIndex);
                     break;
@@ -91,6 +119,7 @@ final public class NettyCodecAdapter {
                     if (saveReaderIndex == message.readerIndex()) {
                         throw new IOException("Decode without read data.");
                     }
+                    // 读取数据
                     if (msg != null) {
                         out.add(msg);
                     }

@@ -530,10 +530,10 @@ public class DubboBootstrap {
      */
     public void initialize() {
         if (!initialized.compareAndSet(false, true)) {
-            return;
+            return; // initialize方法只能初始化一次
         }
 
-        ApplicationModel.initFrameworkExts();
+        ApplicationModel.initFrameworkExts(); // 初始化FrameworkExt实现类，这里会调用Environment的initialize方法
 
         startConfigCenter();
 
@@ -837,21 +837,29 @@ public class DubboBootstrap {
         return metadataAddressBuilder.toString();
     }
 
+    /**
+     * 创建RegistryConfig和ProtocolConfig对象，并设置其属性。<br><br>
+     *
+     * 该方法首先从Environment对象的appExternalConfigurationMap和externalConfigurationMap字段中获取所有的ProtocolConfig和RegistryConfig的id值，
+     * 根据id值创建对应的RegistryConfig和ProtocolConfig对象。之后使用Environment对象设置RegistryConfig和ProtocolConfig对象的各个属性。
+     */
     private void loadRemoteConfigs() {
         // registry ids to registry configs
         List<RegistryConfig> tmpRegistries = new ArrayList<>();
-        Set<String> registryIds = configManager.getRegistryIds();
+        Set<String> registryIds = configManager.getRegistryIds(); // 获取所有的id
+        // 遍历id
         registryIds.forEach(id -> {
             if (tmpRegistries.stream().noneMatch(reg -> reg.getId().equals(id))) {
-                tmpRegistries.add(configManager.getRegistry(id).orElseGet(() -> {
+                tmpRegistries.add(configManager.getRegistry(id).orElseGet(() -> { // id对应的RegistryConfig不存在，则创建
                     RegistryConfig registryConfig = new RegistryConfig();
                     registryConfig.setId(id);
-                    registryConfig.refresh();
+                    registryConfig.refresh(); // 使用Environment对象的属性值初始化RegistryConfig对象
                     return registryConfig;
                 }));
             }
         });
 
+        // 将RegistryConfig添加到ConfigManager对象
         configManager.addRegistries(tmpRegistries);
 
         // protocol ids to protocol configs
@@ -1181,6 +1189,7 @@ public class DubboBootstrap {
     }
 
     private void registerServiceInstance() {
+        // 判断是否使用自省服务发现
         if (CollectionUtils.isEmpty(getServiceDiscoveries())) {
             return;
         }
@@ -1189,12 +1198,14 @@ public class DubboBootstrap {
 
         String serviceName = application.getName();
 
+        // 获取服务端发布的任意一个服务URL
         URL exportedURL = selectMetadataServiceExportedURL();
 
         String host = exportedURL.getHost();
 
         int port = exportedURL.getPort();
 
+        // 创建DefaultServiceInstance对象，该对象持有IP、端口、应用名。
         ServiceInstance serviceInstance = createServiceInstance(serviceName, host, port);
 
         doRegisterServiceInstance(serviceInstance);
@@ -1219,6 +1230,8 @@ public class DubboBootstrap {
         publishMetadataToRemote(serviceInstance);
 
         logger.info("Start registering instance address to registry.");
+        // 遍历ServiceDiscovery对象，每个ServiceDiscovery实现类都由EventPublishingServiceDiscovery封装，
+        // 所以这里调用的都是EventPublishingServiceDiscovery的register方法
         getServiceDiscoveries().forEach(serviceDiscovery ->
         {
             calInstanceRevision(serviceDiscovery, serviceInstance);

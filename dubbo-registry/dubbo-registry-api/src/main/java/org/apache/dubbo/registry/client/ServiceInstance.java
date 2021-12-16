@@ -23,6 +23,9 @@ import java.util.Map;
  * The model class of an instance of a service, which is used for service registration and discovery.
  * <p>
  *
+ * ServiceInstance对象是服务端做DubboBootstrap启动时，调用registerServiceInstance方法注册的
+ * <p>
+ *
  * @since 2.7.5
  */
 public interface ServiceInstance extends Serializable {
