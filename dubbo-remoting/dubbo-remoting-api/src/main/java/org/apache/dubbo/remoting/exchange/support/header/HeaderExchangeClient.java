@@ -59,14 +59,37 @@ import static org.apache.dubbo.remoting.utils.UrlUtils.getIdleTimeout;
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
+    /**
+     * client
+     */
     private final Client client;
+
+    /**
+     * channel连接
+     */
     private final ExchangeChannel channel;
 
+    /**
+     * 时间轮定时调度
+     */
     private static final HashedWheelTimer IDLE_CHECK_TIMER = new HashedWheelTimer(
             new NamedThreadFactory("dubbo-client-idleCheck", true), 1, TimeUnit.SECONDS, TICKS_PER_WHEEL);
+
+    /**
+     * 心跳定时任务
+     */
     private HeartbeatTimerTask heartBeatTimerTask;
+
+    /**
+     * 重连定时任务
+     */
     private ReconnectTimerTask reconnectTimerTask;
 
+    /**
+     * 传入客户端，并且确定是否启动重连/心跳等任务
+     * @param client     客户端，默认是NettyClient
+     * @param startTimer 是否启动重连/心跳等任务
+     */
     public HeaderExchangeClient(Client client, boolean startTimer) {
         Assert.notNull(client, "Client can't be null");
         this.client = client;
@@ -74,7 +97,9 @@ public class HeaderExchangeClient implements ExchangeClient {
 
         if (startTimer) {
             URL url = client.getUrl();
+            // 启动重连任务
             startReconnectTask(url);
+            // 启动心跳任务
             startHeartBeatTask(url);
         }
     }
@@ -131,11 +156,13 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     @Override
     public void send(Object message) throws RemotingException {
+        // 没啥说的，向服务端发送消息
         channel.send(message);
     }
 
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
+        // 没啥说的，向服务端发送消息，sent 是否等待成功发送
         channel.send(message, sent);
     }
 
@@ -153,19 +180,25 @@ public class HeaderExchangeClient implements ExchangeClient {
     @Override
     public void close(int timeout) {
         // Mark the client into the closure process
+        // 标记开始关闭，主要是设置关闭状态位
         startClose();
+        // 执行关闭业务逻辑
         doClose();
+        // 调用关闭操作
         channel.close(timeout);
     }
 
     @Override
     public void startClose() {
+        // 标记开始关闭
         channel.startClose();
     }
 
     @Override
     public void reset(URL url) {
+        // 调用客户端的重置
         client.reset(url);
+        // FIXME，如果新 URL 中的参数不同，是否应该取消并重新启动计时器任务？
         // FIXME, should cancel and restart timer tasks if parameters in the new URL are different?
     }
 
@@ -177,6 +210,7 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     @Override
     public void reconnect() throws RemotingException {
+        // 重连
         client.reconnect();
     }
 
@@ -201,13 +235,15 @@ public class HeaderExchangeClient implements ExchangeClient {
     }
 
     /**
-     * 启动心跳任务
+     * 启动心跳任务，感觉这个心跳是双向的呀。。。
      * @param url URL
      */
     private void startHeartBeatTask(URL url) {
         if (!client.canHandleIdle()) {
             AbstractTimerTask.ChannelProvider cp = () -> Collections.singletonList(HeaderExchangeClient.this);
+            // 获取心跳间隔时间
             int heartbeat = getHeartbeat(url);
+            // 获取心跳超时时间
             long heartbeatTick = calculateLeastDuration(heartbeat);
             this.heartBeatTimerTask = new HeartbeatTimerTask(cp, heartbeatTick, heartbeat);
             IDLE_CHECK_TIMER.newTimeout(heartBeatTimerTask, heartbeatTick, TimeUnit.MILLISECONDS);
@@ -233,18 +269,22 @@ public class HeaderExchangeClient implements ExchangeClient {
         }
     }
 
+    /**
+     * 关闭客户端的业务处理
+     */
     private void doClose() {
+        // 关闭心跳定时器
         if (heartBeatTimerTask != null) {
             heartBeatTimerTask.cancel();
         }
-
+        // 关闭重连定时器
         if (reconnectTimerTask != null) {
             reconnectTimerTask.cancel();
         }
     }
 
     /**
-     * Each interval cannot be less than 1000ms.
+     * Each interval cannot be less than 1000ms. 计算两次心跳的最小间隔，至少1秒
      */
     private long calculateLeastDuration(int time) {
         if (time / HEARTBEAT_CHECK_TICK <= 0) {

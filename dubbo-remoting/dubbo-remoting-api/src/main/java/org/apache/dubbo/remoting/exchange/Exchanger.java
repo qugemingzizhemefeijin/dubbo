@@ -28,8 +28,17 @@ import org.apache.dubbo.remoting.exchange.support.header.HeaderExchanger;
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Message_Exchange_Pattern">Message Exchange Pattern</a>
  * <a href="http://en.wikipedia.org/wiki/Request-response">Request-Response</a>
+ *
+ * <p>
+ * Exchange信息交换层介于Protocol层与Transport层之间，起着承上启下的作用，在Exchange层，封装请求响应模式，将Invocation与Result封装成Request与Response，将请求同步转成异步。
+ * 以 Request, Response 为中心，扩展接口为 Exchanger, ExchangeChannel, ExchangeClient, ExchangeServer。
+ *
+ * <p>
+ * dubbo spi 扩展点，默认实现类是HeaderExchanger ，它提供了bind与connect 方法抽象，在服务暴露的时候会调用bind方法来绑定一个服务器，
+ * 返回对应的ExchangeServer，在服务引用的时候通过connect方法创建客户端连接服务端，返回对应的ExchangeClient。
+ *
  */
-@SPI(HeaderExchanger.NAME)
+@SPI(HeaderExchanger.NAME) // 默认就是header，HeaderExchanger
 public interface Exchanger {
 
     /**

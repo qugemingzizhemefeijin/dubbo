@@ -27,16 +27,16 @@ import java.util.Collection;
 public interface ExchangeServer extends RemotingServer {
 
     /**
-     * get channels.
+     * get channels. 循环遍历channel，然后使用HeaderExchangeChannel 的方法进行包装channel。
      *
      * @return channels
      */
     Collection<ExchangeChannel> getExchangeChannels();
 
     /**
-     * get channel.
+     * get channel. 获取根据远程地址获取ExchangeChannel 也是先获取channel，然后再使用HeaderExchangeChannel进行包装。
      *
-     * @param remoteAddress
+     * @param remoteAddress InetSocketAddress
      * @return channel
      */
     ExchangeChannel getExchangeChannel(InetSocketAddress remoteAddress);

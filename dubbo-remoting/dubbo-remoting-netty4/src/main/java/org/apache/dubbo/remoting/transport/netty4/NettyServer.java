@@ -217,6 +217,7 @@ public class NettyServer extends AbstractServer implements RemotingServer {
 
     @Override
     public Channel getChannel(InetSocketAddress remoteAddress) {
+        // 这里应该是转换成IP地址
         return channels.get(NetUtils.toAddressString(remoteAddress));
     }
 

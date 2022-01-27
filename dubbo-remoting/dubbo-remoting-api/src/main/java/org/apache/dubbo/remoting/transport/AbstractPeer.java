@@ -56,6 +56,7 @@ public abstract class AbstractPeer implements Endpoint, ChannelHandler {
 
     @Override
     public void send(Object message) throws RemotingException {
+        // 发送消息，默认sent如果未配置，则为false，如果是NettyChannel的话，则是同步发送（就是保证netty真正的将消息发送出去）
         send(message, url.getParameter(Constants.SENT_KEY, false));
     }
 

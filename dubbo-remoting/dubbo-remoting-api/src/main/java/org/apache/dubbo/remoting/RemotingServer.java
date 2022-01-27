@@ -39,14 +39,14 @@ public interface RemotingServer extends Endpoint, Resetable, IdleSensible {
     boolean isBound();
 
     /**
-     * get channels.
+     * 获取连接到远程服务的所有的连接通道
      *
      * @return channels
      */
     Collection<Channel> getChannels();
 
     /**
-     * get channel.
+     * get channel. 根据客户端地址信息获取连接通道
      *
      * @param remoteAddress
      * @return channel

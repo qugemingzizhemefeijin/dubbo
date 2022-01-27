@@ -102,9 +102,12 @@ public abstract class AbstractServer extends AbstractEndpoint implements Remotin
 
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
+        // 获取所有的链接，getChannels()方法是子类实现的，如NettyServer中的getChannels()就是获取所有的链接
         Collection<Channel> channels = getChannels();
         for (Channel channel : channels) {
+            // 如果链接未断开
             if (channel.isConnected()) {
+                // 发送消息
                 channel.send(message, sent);
             }
         }

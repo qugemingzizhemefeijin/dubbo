@@ -23,12 +23,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 /**
- * ExchangeChannel. (API/SPI, Prototype, ThreadSafe)
+ * ExchangeChannel. (API/SPI, Prototype, ThreadSafe) <br><br>
+ *
+ * HeaderExchangeClient中就将client包装成了ExchangeChannel，在HeaderExchangeServer中将channel包装成了ExchangeChannel，Channel字面意思通道，可以将它理解为客户端与服务端的连接。<br><br>
+ *
+ * 信息交换层封装了请求响应模式，发送请求便是request。
  */
 public interface ExchangeChannel extends Channel {
 
     /**
-     * send request.
+     * send request. 发送请求
      *
      * @param request
      * @return response future
@@ -38,7 +42,7 @@ public interface ExchangeChannel extends Channel {
     CompletableFuture<Object> request(Object request) throws RemotingException;
 
     /**
-     * send request.
+     * send request. 发送请求带有超时功能
      *
      * @param request
      * @param timeout
@@ -49,7 +53,7 @@ public interface ExchangeChannel extends Channel {
     CompletableFuture<Object> request(Object request, int timeout) throws RemotingException;
 
     /**
-     * send request.
+     * send request. 发送请求并制定线程池
      *
      * @param request
      * @return response future
@@ -58,7 +62,7 @@ public interface ExchangeChannel extends Channel {
     CompletableFuture<Object> request(Object request, ExecutorService executor) throws RemotingException;
 
     /**
-     * send request.
+     * send request. 发送请求带有超时功能并指定线程池
      *
      * @param request
      * @param timeout
@@ -68,16 +72,16 @@ public interface ExchangeChannel extends Channel {
     CompletableFuture<Object> request(Object request, int timeout, ExecutorService executor) throws RemotingException;
 
     /**
-     * get message handler.
+     * get message handler. 获取消息handler
      *
      * @return message handler
      */
     ExchangeHandler getExchangeHandler();
 
     /**
-     * graceful close.
+     * graceful close. 优雅关闭
      *
-     * @param timeout
+     * @param timeout 超时时间
      */
     @Override
     void close(int timeout);

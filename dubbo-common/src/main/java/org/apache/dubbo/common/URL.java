@@ -813,6 +813,12 @@ class URL implements Serializable {
         return value <= 0 ? defaultValue : value;
     }
 
+    /**
+     * 获取URL中的key值，并且如果小于等于0的话，则直接返回defaultValue
+     * @param key          String
+     * @param defaultValue 未匹配到key则返回的默认值
+     * @return int
+     */
     public int getPositiveParameter(String key, int defaultValue) {
         if (defaultValue <= 0) {
             throw new IllegalArgumentException("defaultValue <= 0");

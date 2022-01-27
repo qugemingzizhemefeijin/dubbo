@@ -120,7 +120,8 @@ public class ExecutorUtil {
     }
 
     /**
-     * append thread name with url address
+     * 将URL中的threadname替换为 name + "-" + IP地址，如果没有设置threadname则线程名称使用 defaultName = DubboServerHandler。
+     * 在 org.apache.dubbo.remoting.transport.netty4.NettyServer 的构造函数中有使用
      *
      * @return new url with updated thread name
      */

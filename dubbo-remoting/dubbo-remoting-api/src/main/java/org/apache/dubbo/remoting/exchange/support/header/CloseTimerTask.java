@@ -28,6 +28,9 @@ public class CloseTimerTask extends AbstractTimerTask {
 
     private static final Logger logger = LoggerFactory.getLogger(CloseTimerTask.class);
 
+    /**
+     * 获取心跳空闲超时时间
+     */
     private final int idleTimeout;
 
     public CloseTimerTask(ChannelProvider channelProvider, Long heartbeatTimeoutTick, int idleTimeout) {
@@ -35,17 +38,23 @@ public class CloseTimerTask extends AbstractTimerTask {
         this.idleTimeout = idleTimeout;
     }
 
+    // 此方法在父类的run中调用，循环次服务所有的连接，判断是否超时了。
     @Override
     protected void doTask(Channel channel) {
         try {
+            // 最后一次读
             Long lastRead = lastRead(channel);
+            // 最后一次写
             Long lastWrite = lastWrite(channel);
             Long now = now();
             // check ping & pong at server
+            // 最后一次读的时间不是null &&  最后一次读的时间距离现在不超过 心跳间隔时间
             if ((lastRead != null && now - lastRead > idleTimeout)
+                    // 或者最后一次写的时间不是null && 最后一次写的时间距离现在不超过 心跳间隔时间
                     || (lastWrite != null && now - lastWrite > idleTimeout)) {
                 logger.warn("Close channel " + channel + ", because idleCheck timeout: "
                         + idleTimeout + "ms");
+                // 服务端断开连接
                 channel.close();
             }
         } catch (Throwable t) {

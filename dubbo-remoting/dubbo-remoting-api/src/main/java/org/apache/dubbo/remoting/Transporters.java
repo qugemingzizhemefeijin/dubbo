@@ -36,6 +36,11 @@ public class Transporters {
     private Transporters() {
     }
 
+    // handler = HeaderExchangeHandler
+    // url = dubbo://127.0.0.1:20001/com.test.HelloWorld?
+    // anyhost=true&application=test-service&bind.ip=172.18.5.65&bind.port=10000&channel.readonly.sent=true&codec=dubbo&deprecated=false&
+    // dubbo=2.0.2&dynamic=true&generic=false&heartbeat=60000&interface=com.test.Hello&metadata-type=remote&methods=say&hello.timeout=60000&
+    // pid=9108&qos.enable=false&release=2.7.7&retries=0&side=provider&telnet=help&timeout=60000&timestamp=1643274969945&version=3.0.0
     public static RemotingServer bind(String url, ChannelHandler... handler) throws RemotingException {
         return bind(URL.valueOf(url), handler);
     }
@@ -51,8 +56,10 @@ public class Transporters {
         if (handlers.length == 1) {
             handler = handlers[0];
         } else {
+            // 多个channal  对 Channel分发 ChannelHandlerDispatcher 循环
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        // 真正服务器 进行bind
         return getTransporter().bind(url, handler);
     }
 
@@ -65,17 +72,22 @@ public class Transporters {
             throw new IllegalArgumentException("url == null");
         }
         ChannelHandler handler;
-        if (handlers == null || handlers.length == 0) {
+        if (handlers == null || handlers.length == 0) { // handler 是null的情况
             handler = new ChannelHandlerAdapter();
-        } else if (handlers.length == 1) {
+        } else if (handlers.length == 1) { // 一个handler的情况
             handler = handlers[0];
-        } else {
+        } else { // 多个的情况
             handler = new ChannelHandlerDispatcher(handlers);
         }
         return getTransporter().connect(url, handler);
     }
 
+    /**
+     * 获取 客户端 连接和端口绑定的实现类，默认返回的是 org.apache.dubbo.remoting.transport.netty4.NettyTransporter
+     * @return Transporter
+     */
     public static Transporter getTransporter() {
+        // org.apache.dubbo.remoting.transport.netty4.NettyTransporter implement Transporter
         return ExtensionLoader.getExtensionLoader(Transporter.class).getAdaptiveExtension();
     }
 

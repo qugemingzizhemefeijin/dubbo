@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * NettyServerHandler.
+ * NettyServerHandler. dubbo服务端的消息处理器
  */
 @io.netty.channel.ChannelHandler.Sharable
 public class NettyServerHandler extends ChannelDuplexHandler {
@@ -64,6 +64,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         return channels;
     }
 
+    // 当用户连接进来的事件回调
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // 获得通道
@@ -72,7 +73,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         if (channel != null) {
             channels.put(NetUtils.toAddressString((InetSocketAddress) ctx.channel().remoteAddress()), channel);
         }
-        // 处理连接时间
+        // 处理连接事件
         handler.connected(channel);
 
         if (logger.isInfoEnabled()) {
@@ -80,6 +81,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         }
     }
 
+    // 当用户连接断开的事件回调
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
@@ -95,20 +97,24 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         }
     }
 
+    // 读取消息的时间回调，在调用decode之后会通过此方法回调进来
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         handler.received(channel, msg);
     }
 
-
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        // 写入消息
         super.write(ctx, msg, promise);
+        // 将消息写入其他的处理器
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         handler.sent(channel, msg);
     }
 
+    // 当设置了readerIdleTime以后，服务端server会每隔readerIdleTime时间去检查一次channelRead方法被调用的情况，
+    // 如果在readerIdleTime时间内该channel上的channelRead()方法没有被触发，就会调用userEventTriggered方法。
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         // server will close channel when server don't receive any heartbeat from client util timeout.
@@ -124,6 +130,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         super.userEventTriggered(ctx, evt);
     }
 
+    // 当连接发生异常的回调
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
@@ -135,6 +142,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         }
     }
 
+    // 握手完成？应你该是提供给子类来实现的。。。
     public void handshakeCompleted(HandshakeCompletionEvent evt) {
         // TODO
     }

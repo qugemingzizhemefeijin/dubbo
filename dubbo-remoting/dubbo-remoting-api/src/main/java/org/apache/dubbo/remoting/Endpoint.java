@@ -52,7 +52,7 @@ public interface Endpoint {
     InetSocketAddress getLocalAddress();
 
     /**
-     * send message.
+     * send message. 这个是服务对连接发送消息，默认是同步发送，就是需要等待netty将消息成功写入到socket中并且发送出去
      *
      * @param message
      * @throws RemotingException
@@ -60,23 +60,26 @@ public interface Endpoint {
     void send(Object message) throws RemotingException;
 
     /**
-     * send message.
+     * send message. 这个是服务对连接发送消息。如AbstractServer中的send就是对连接其上的所有的客户端发送指定的消息
      *
      * @param message
-     * @param sent    already sent to socket?
+     * @param sent    already sent to socket? 判断是否需要等待消息发送出去了
      */
     void send(Object message, boolean sent) throws RemotingException;
 
     /**
-     * close the channel.
+     * 关闭服务/链接
      */
     void close();
 
     /**
-     * Graceful close the channel.
+     * 优雅地关闭服务/链接
      */
     void close(int timeout);
 
+    /**
+     * 通知服务/链接我要开始关闭了（实际应该是调用完之后需要一定的业务处理之后再调用close方法）
+     */
     void startClose();
 
     /**

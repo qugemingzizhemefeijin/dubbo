@@ -26,9 +26,9 @@ import org.apache.dubbo.remoting.exchange.Exchanger;
 import org.apache.dubbo.remoting.transport.DecodeHandler;
 
 /**
- * DefaultMessenger
+ * 默认实现HeaderExchanger。
  *
- *
+ * HeaderExchanger在实现Exchanger接口，重写bind与connect方法，在bind方法中创建了一个HeaderExchangeServer对象，然后在connect方法中创建了一个HeaderExchangeClient。
  */
 public class HeaderExchanger implements Exchanger {
 

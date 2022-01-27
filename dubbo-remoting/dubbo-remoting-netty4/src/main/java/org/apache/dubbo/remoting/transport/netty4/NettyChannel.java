@@ -170,7 +170,7 @@ final class NettyChannel extends AbstractChannel {
         try {
             // 写入数据，发送消息
             ChannelFuture future = channel.writeAndFlush(message);
-            // 如果已经发送过
+            // 如果要求同步发送，则需要等netty成功的发送了数据才返回
             if (sent) {
                 // wait timeout ms
                 // 获得超时时间

@@ -28,7 +28,7 @@ import org.apache.dubbo.common.Resetable;
 public interface Client extends Endpoint, Channel, Resetable, IdleSensible {
 
     /**
-     * reconnect.
+     * reconnect. 重新连接服务
      */
     void reconnect() throws RemotingException;
 

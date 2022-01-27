@@ -35,7 +35,7 @@ import static org.apache.dubbo.common.constants.CommonConstants.THREADS_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.THREAD_NAME_KEY;
 
 /**
- * 实现 ThreadPool 接口，固定大小线程池，启动时建立线程，不关闭，一直持有。
+ * 实现 ThreadPool 接口，固定大小线程池，启动时建立线程，不关闭，一直持有。<strong>此线程池是dubbo的默认线程池</strong>
  *
  * @see java.util.concurrent.Executors#newFixedThreadPool(int)
  */
