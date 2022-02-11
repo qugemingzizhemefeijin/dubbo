@@ -47,15 +47,26 @@ public abstract class AbstractEndpoint extends AbstractPeer implements Resetable
 
     public AbstractEndpoint(URL url, ChannelHandler handler) {
         super(url, handler);
+        // 获取codec
         this.codec = getChannelCodec(url);
+        // 连接超时默认是3s
         this.connectTimeout = url.getPositiveParameter(Constants.CONNECT_TIMEOUT_KEY, Constants.DEFAULT_CONNECT_TIMEOUT);
     }
 
+    /**
+     * 获取消息的编解码器
+     * @param url URL
+     * @return Codec2
+     */
     protected static Codec2 getChannelCodec(URL url) {
+        // codec类型
         String codecName = url.getProtocol(); // codec extension name must stay the same with protocol name
+        // 判断codec2有没有类的实现
         if (ExtensionLoader.getExtensionLoader(Codec2.class).hasExtension(codecName)) {
+            // 如果扩展中有，则使用Codec2的实现
             return ExtensionLoader.getExtensionLoader(Codec2.class).getExtension(codecName);
         } else {
+            // 废弃的代码
             return new CodecAdapter(ExtensionLoader.getExtensionLoader(Codec.class)
                     .getExtension(codecName));
         }

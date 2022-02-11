@@ -25,15 +25,16 @@ import com.alibaba.dubbo.remoting.RemotingException;
  */
 @Deprecated
 public interface ResponseFuture {
+
     /**
-     * get result.
+     * get result. 获取结果
      *
      * @return result.
      */
     Object get() throws RemotingException;
 
     /**
-     * get result with the specified timeout.
+     * get result with the specified timeout. 在指定时间内获取结果
      *
      * @param timeoutInMillis timeout.
      * @return result.
@@ -41,14 +42,14 @@ public interface ResponseFuture {
     Object get(int timeoutInMillis) throws RemotingException;
 
     /**
-     * set callback.
+     * set callback. 设置回调函数
      *
      * @param callback
      */
     void setCallback(ResponseCallback callback);
 
     /**
-     * check is done.
+     * check is done. 检查是否已完成
      *
      * @return done or not.
      */

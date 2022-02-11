@@ -87,7 +87,7 @@ final public class NettyCodecAdapter {
             Channel ch = ctx.channel();
             // 获取Dubbo Channel
             NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
-            // 对输出数据进行Dubbo编码
+            // 对输出数据进行Dubbo编码，默认情况一般是 codec = ExchangeCodec
             codec.encode(channel, buffer, msg);
         }
     }
@@ -108,7 +108,7 @@ final public class NettyCodecAdapter {
             do {
                 // 记录读索引
                 int saveReaderIndex = message.readerIndex();
-                // 解码
+                // 解码，默认情况一般是 codec = ExchangeCodec
                 Object msg = codec.decode(channel, message);
                 // 拆包
                 if (msg == Codec2.DecodeResult.NEED_MORE_INPUT) {

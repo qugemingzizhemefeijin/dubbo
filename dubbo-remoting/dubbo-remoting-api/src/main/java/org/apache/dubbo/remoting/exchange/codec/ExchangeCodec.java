@@ -67,11 +67,14 @@ public class ExchangeCodec extends TelnetCodec {
 
     @Override
     public void encode(Channel channel, ChannelBuffer buffer, Object msg) throws IOException {
-        if (msg instanceof Request) {
+        if (msg instanceof Request) { // msg 是 Request 对象
+            // 编码请求
             encodeRequest(channel, buffer, (Request) msg);
-        } else if (msg instanceof Response) {
+        } else if (msg instanceof Response) { // msg 是 Response 对象
+            // 编码响应
             encodeResponse(channel, buffer, (Response) msg);
         } else {
+            // 剩下的交给telnet编码
             super.encode(channel, buffer, msg);
         }
     }
@@ -224,23 +227,26 @@ public class ExchangeCodec extends TelnetCodec {
     }
 
     protected void encodeRequest(Channel channel, ChannelBuffer buffer, Request req) throws IOException {
-        Serialization serialization = getSerialization(channel, req);
-        // header.
+        Serialization serialization = getSerialization(channel, req); // 缺省hessian2
+        // header. 创建一个header的字节数组  16 byte
         byte[] header = new byte[HEADER_LENGTH];
         // set magic number.
         Bytes.short2bytes(MAGIC, header);
 
         // set request and serialization flag.
+        // 使用 FLAG_REQUEST |  系列化id
         header[2] = (byte) (FLAG_REQUEST | serialization.getContentTypeId());
 
+        // 设置是单向还是双向
         if (req.isTwoWay()) {
             header[2] |= FLAG_TWOWAY;
         }
+        // 是否是事件
         if (req.isEvent()) {
             header[2] |= FLAG_EVENT;
         }
 
-        // set request id.
+        // set request id. 设置请求id
         Bytes.long2bytes(req.getId(), header, 4);
 
         // encode request data.
@@ -248,14 +254,17 @@ public class ExchangeCodec extends TelnetCodec {
         buffer.writerIndex(savedWriteIndex + HEADER_LENGTH);
         ChannelBufferOutputStream bos = new ChannelBufferOutputStream(buffer);
 
+        // 心跳
         if (req.isHeartbeat()) {
-            // heartbeat request data is always null
+            // heartbeat request data is always null  心跳请求数据始终为空
             bos.write(CodecSupport.getNullBytesOf(serialization));
         } else {
+            // 使用serialization 对body进行序列化
             ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
+            // 是否是个事件
             if (req.isEvent()) {
                 encodeEventData(channel, out, req.getData());
-            } else {
+            } else { // 不是事件
                 encodeRequestData(channel, out, req.getData(), req.getVersion());
             }
             out.flushBuffer();
@@ -266,8 +275,9 @@ public class ExchangeCodec extends TelnetCodec {
 
         bos.flush();
         bos.close();
+        // body长度
         int len = bos.writtenBytes();
-        checkPayload(channel, len);
+        checkPayload(channel, len); // 检验有没有超长
         Bytes.int2bytes(len, header, 12);
 
         // write
@@ -457,6 +467,7 @@ public class ExchangeCodec extends TelnetCodec {
         encodeRequestData(channel, out, data);
     }
 
+    // 编码事件请求数据
     private void encodeEventData(Channel channel, ObjectOutput out, Object data) throws IOException {
         encodeEventData(out, data);
     }
@@ -474,6 +485,14 @@ public class ExchangeCodec extends TelnetCodec {
         encodeResponseData(out, data);
     }
 
+    /**
+     * 编码普通请求
+     * @param channel Channel
+     * @param out     序列化生成器
+     * @param data    请求数据
+     * @param version 请求中的版本号
+     * @throws IOException
+     */
     protected void encodeRequestData(Channel channel, ObjectOutput out, Object data, String version) throws IOException {
         encodeRequestData(out, data);
     }

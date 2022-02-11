@@ -43,8 +43,16 @@ public abstract class AbstractCodec implements Codec2 {
 
     private static final String SERVER_SIDE = "server";
 
+    /**
+     * 校验数据长度，是否超过指定的上限
+     * @param channel Channel
+     * @param size    数据长度
+     * @throws IOException
+     */
     protected static void checkPayload(Channel channel, long size) throws IOException {
+        // 获取当前的最大可传输数据
         int payload = getPayload(channel);
+        // 判断是否超出最大可传输数据
         boolean overPayload = isOverPayload(payload, size);
         if (overPayload) {
             ExceedPayloadLimitException e = new ExceedPayloadLimitException(
@@ -54,7 +62,13 @@ public abstract class AbstractCodec implements Codec2 {
         }
     }
 
+    /**
+     * 获取最大的数据承载量，默认为8M，可以对某个请求单独设置payload来提高数据承载量
+     * @param channel Channel
+     * @return int
+     */
     protected static int getPayload(Channel channel) {
+        // 默认8M
         int payload = Constants.DEFAULT_PAYLOAD;
         if (channel != null && channel.getUrl() != null) {
             payload = channel.getUrl().getParameter(Constants.PAYLOAD_KEY, Constants.DEFAULT_PAYLOAD);
@@ -62,6 +76,12 @@ public abstract class AbstractCodec implements Codec2 {
         return payload;
     }
 
+    /**
+     * 判断是否超过了最大可传输数据
+     * @param payload int
+     * @param size    long
+     * @return boolean
+     */
     protected static boolean isOverPayload(int payload, long size) {
         if (payload > 0 && size > payload) {
             return true;
