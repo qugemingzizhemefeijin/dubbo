@@ -73,6 +73,20 @@ public class NettyServer extends AbstractServer implements RemotingServer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
 
+    /**
+     * 初始化Netty服务端，这里URL的内容如下：<br>
+     * dubbo://127.0.0.1:20801/com.xxx.yy?
+     * anyhost=true&application=aaaa&bind.ip=172.18.5.1&bind.port=20801&channel.readonly.sent=true&codec=dubbo&deprecated=false
+     * &dubbo=2.0.2&dynamic=true&generic=false&heartbeat=60000&interface=com.xxx.yy&metadata-type=remote&methods=helloWorldpid=2748
+     * &qos.enable=false&release=2.7.7&retries=0&side=provider&telnet=help&timeout=60000&timestamp=1644631573915&version=3.0.0
+     * <br><br>
+     * 此处还额外的封装了Netty Dubbo的线程池名称，默认为 DubboServerHandler - IP:端口-thread- 这个好像是写死的，在其父类 AbstractServer 中会调用并创建线程池.
+     * <br><br>
+     * 这个方法的原始调用地方再 HeaderExchanger.bind(URL url, ExchangeHandler handler)方法。
+     * @param url     服务端URL
+     * @param handler {@link org.apache.dubbo.remoting.transport.DecodeHandler}
+     * @throws RemotingException
+     */
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException {
         // you can customize name and type of client thread pool by THREAD_NAME_KEY and THREADPOOL_KEY in CommonConstants.
         // the handler will be wrapped: MultiMessageHandler->HeartbeatHandler->handler

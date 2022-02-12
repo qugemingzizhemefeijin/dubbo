@@ -115,8 +115,9 @@ public class DubboProtocol extends AbstractProtocol {
                         + (message == null ? null : (message.getClass().getName() + ": " + message))
                         + ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress());
             }
-
+            // message 可能等于 org.apache.dubbo.rpc.protocol.dubbo.DecodeableRpcInvocation
             Invocation inv = (Invocation) message;
+            // invoker 可能等于 org.apache.dubbo.rpc.protocol.ProtocolFilterWrapper
             Invoker<?> invoker = getInvoker(channel, inv);
             // need to consider backward-compatibility if it's a callback
             if (Boolean.TRUE.toString().equals(inv.getObjectAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
@@ -142,6 +143,7 @@ public class DubboProtocol extends AbstractProtocol {
                 }
             }
             RpcContext.getContext().setRemoteAddress(channel.getRemoteAddress());
+            // 这里会用到异步调用，返回的结果为 AsyncRpcResult 对象
             Result result = invoker.invoke(inv);
             return result.thenApply(Function.identity());
         }
@@ -328,6 +330,11 @@ public class DubboProtocol extends AbstractProtocol {
         }
     }
 
+    /**
+     * 创建服务端
+     * @param url dubbo://127.0.0.1:20801/com.xx.yyy?anyhost=true&application=tttttt&bind.ip=172.1.1.65&bind.port=20801&channel.readonly.sent=true&codec=dubbo&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&heartbeat=60000&interface=com.xx.yyy&metadata-type=remote&methods=sayHellp&newWriteOtcChange.timeout=60000&pid=14656&qos.enable=false&release=2.7.7&retries=0&side=provider&telnet=help&timeout=60000&timestamp=1644650724003&version=3.0.0
+     * @return ProtocolServer
+     */
     private ProtocolServer createServer(URL url) {
         url = URLBuilder.from(url)
                 // send readonly event when server closes, it's enabled by default
@@ -344,6 +351,7 @@ public class DubboProtocol extends AbstractProtocol {
 
         ExchangeServer server;
         try {
+            // requestHandler实际上是一个匿名内部，ExchangeHandlerAdapter 的实现，具体实现类在 org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol.requestHandler
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);

@@ -49,6 +49,11 @@ public class NettyServerHandler extends ChannelDuplexHandler {
 
     private final ChannelHandler handler;
 
+    /**
+     * 构造 NettyServerHandler
+     * @param url     暴露的服务URL
+     * @param handler 这个就是NettyServer对象
+     */
     public NettyServerHandler(URL url, ChannelHandler handler) {
         if (url == null) {
             throw new IllegalArgumentException("url == null");
@@ -142,7 +147,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         }
     }
 
-    // 握手完成？应你该是提供给子类来实现的。。。
+    // 握手完成？应该是提供给子类来实现的。。。
     public void handshakeCompleted(HandshakeCompletionEvent evt) {
         // TODO
     }

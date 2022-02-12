@@ -80,6 +80,7 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
     public void decode() throws Exception {
         if (!hasDecoded && channel != null && inputStream != null) {
             try {
+                // 对消息体进行解码
                 decode(channel, inputStream);
             } catch (Throwable e) {
                 if (log.isWarnEnabled()) {
@@ -88,6 +89,7 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
                 request.setBroken(true);
                 request.setData(e);
             } finally {
+                // 标记为已解码
                 hasDecoded = true;
             }
         }

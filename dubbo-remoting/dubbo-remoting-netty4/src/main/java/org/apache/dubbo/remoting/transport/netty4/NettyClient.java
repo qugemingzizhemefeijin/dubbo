@@ -78,6 +78,9 @@ public class NettyClient extends AbstractClient {
     /**
      * The constructor of NettyClient.
      * It wil init and start netty.
+     *
+     * @param url     dubbo://192.168.1.1:20881/com.xx.yy?application=xxxx&check=false&codec=dubbo&connect.timeout=10000&deprecated=false&dubbo=2.0.2 &heartbeat=60000&init=false&interface=com.xx.yy&metadata-type=remote&pid=12904&qos.enable=false&register.ip=172.18.1.1&release=2.7.7 &remote.application=sayHello-service&revision=1.0.0&side=consumer&sticky=false&timeout=60000&timestamp=1644401387420&version=3.0.0
+     * @param handler {@link org.apache.dubbo.remoting.transport.DecodeHandler}
      */
     public NettyClient(final URL url, final ChannelHandler handler) throws RemotingException {
     	// you can customize name and type of client thread pool by THREAD_NAME_KEY and THREADPOOL_KEY in CommonConstants.

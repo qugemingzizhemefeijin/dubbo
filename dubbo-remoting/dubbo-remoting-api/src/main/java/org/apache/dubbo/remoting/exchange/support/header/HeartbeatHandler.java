@@ -87,6 +87,7 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
             }
             return;
         }
+        // 如果子类为 NettyServer 则 handler 默认为 AllChannelHandler
         handler.received(channel, message);
     }
 

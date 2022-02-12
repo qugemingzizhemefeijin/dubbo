@@ -62,6 +62,14 @@ public class Exchangers {
         return bind(URL.valueOf(url), handler);
     }
 
+    /**
+     * 创建Dubbo服务
+     * 调用源：org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol#createServer(org.apache.dubbo.common.URL)
+     * @param url     服务端URL dubbo://127.0.0.1:20801/com.xx.yyy?anyhost=true&application=tttttt&bind.ip=172.1.1.65&bind.port=20801&channel.readonly.sent=true&codec=dubbo&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&heartbeat=60000&interface=com.xx.yyy&metadata-type=remote&methods=sayHellp&newWriteOtcChange.timeout=60000&pid=14656&qos.enable=false&release=2.7.7&retries=0&side=provider&telnet=help&timeout=60000&timestamp=1644650724003&version=3.0.0
+     * @param handler 具体实现类在 org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol.requestHandler
+     * @return
+     * @throws RemotingException
+     */
     public static ExchangeServer bind(URL url, ExchangeHandler handler) throws RemotingException {
         if (url == null) {
             throw new IllegalArgumentException("url == null");

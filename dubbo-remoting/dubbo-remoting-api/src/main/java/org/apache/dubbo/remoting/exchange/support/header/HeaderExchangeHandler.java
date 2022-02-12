@@ -50,6 +50,10 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
     private final ExchangeHandler handler;
 
+    /**
+     * 构造HeaderExchangeHandler
+     * @param handler 具体实现类在 org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol.requestHandler
+     */
     public HeaderExchangeHandler(ExchangeHandler handler) {
         if (handler == null) {
             throw new IllegalArgumentException("handler == null");
@@ -192,6 +196,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     // 如果数据是字符串类型，判断channel是哪端，如果是客户端的话，就抛出异常，因为客户端不接收字符串请求，如果是服务端，说明是个telnet请求，交给handler的telnet来处理，并将返回结果，写回到channel中。
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
+        // 这里可能在一次客户端请求被调用两次，第一次会交由handler来处理，相当于一层层的剥洋葱一样，最后交由DecodeHandler来解码，解码完成后再次被HeaderExchangeHandler掉过来后，就被拦截处理掉了。
         // 创建ExchangeChannel对象
         final ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         if (message instanceof Request) {

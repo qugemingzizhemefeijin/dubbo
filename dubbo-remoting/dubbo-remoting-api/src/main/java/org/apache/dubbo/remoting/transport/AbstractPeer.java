@@ -78,6 +78,22 @@ public abstract class AbstractPeer implements Endpoint, ChannelHandler {
         closing = true;
     }
 
+    /**
+     * 服务端的URL内容：<br>
+     * dubbo://127.0.0.1:20801/com.xxx.yy?
+     * anyhost=true&application=aaaa&bind.ip=172.18.5.1&bind.port=20801&channel.readonly.sent=true&codec=dubbo&deprecated=false
+     * &dubbo=2.0.2&dynamic=true&generic=false&heartbeat=60000&interface=com.xxx.yy&metadata-type=remote&methods=helloWorldpid=2748
+     * &qos.enable=false&release=2.7.7&retries=0&side=provider&telnet=help&timeout=60000&timestamp=1644631573915&version=3.0.0
+     *
+     * <br><br>
+     * 客户端的URL内容：<br>
+     * dubbo://192.168.1.1:20881/com.xx.yy?application=xxxx&check=false&codec=dubbo&connect.timeout=10000&deprecated=false&dubbo=2.0.2
+     * &heartbeat=60000&init=false&interface=com.xx.yy&metadata-type=remote&pid=12904&qos.enable=false&register.ip=172.18.1.1&release=2.7.7
+     * &remote.application=sayHello-service&revision=1.0.0&side=consumer&sticky=false&timeout=60000&timestamp=1644401387420&version=3.0.0
+     * <br><br>
+     *
+     * @return URL
+     */
     @Override
     public URL getUrl() {
         return url;
@@ -151,6 +167,7 @@ public abstract class AbstractPeer implements Endpoint, ChannelHandler {
         if (closed) {
             return;
         }
+        // 如果子类为 NettyServer 则 handler 默认为 MultiMessageHandler，这个是在 NettyServer构造函数中创建的，ChannelHandlers.wrap(handler, url) 方法。
         handler.received(ch, msg);
     }
 

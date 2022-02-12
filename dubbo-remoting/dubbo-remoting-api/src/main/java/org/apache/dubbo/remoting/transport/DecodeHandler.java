@@ -30,6 +30,10 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
 
     private static final Logger log = LoggerFactory.getLogger(DecodeHandler.class);
 
+    /**
+     * 初始化DecodeHandler类
+     * @param handler {@link org.apache.dubbo.remoting.exchange.support.header.HeaderExchangeHandler}
+     */
     public DecodeHandler(ChannelHandler handler) {
         super(handler);
     }
@@ -41,6 +45,7 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
         }
 
         if (message instanceof Request) {
+            // 被客户端请求的话， data = org.apache.dubbo.rpc.protocol.dubbo.DecodeableRpcInvocation
             decode(((Request) message).getData());
         }
 
@@ -48,10 +53,12 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
             decode(((Response) message).getResult());
         }
 
+        // HeaderExchangeHandler
         handler.received(channel, message);
     }
 
     private void decode(Object message) {
+        // org.apache.dubbo.rpc.protocol.dubbo.DecodeableRpcInvocation
         if (message instanceof Decodeable) {
             try {
                 ((Decodeable) message).decode();

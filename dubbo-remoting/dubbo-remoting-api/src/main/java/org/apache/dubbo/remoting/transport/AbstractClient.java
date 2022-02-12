@@ -68,6 +68,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         // set default needReconnect true when channel is not connected
         needReconnect = url.getParameter(Constants.SEND_RECONNECT_KEY, true);
 
+        // 初始化消费者线程池，但是没看见使用的地方，那初始化的作用是什么呢？
         initExecutor(url);
 
         try {
@@ -101,9 +102,15 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         }
     }
 
+    /**
+     * 初始化客户端线程池，默认情况下使用 CachedThreadPool 线程池，默认队列使用 SynchronousQueue
+     * @param url URL
+     */
     private void initExecutor(URL url) {
         //issue-7054:Consumer's executor is sharing globally, thread name not require provider ip.
+        // 这里写死了 客户端线程池名称为 DubboClientHandler-192.168.89.43:20881，名字好像是不可修改的
         url = url.addParameter(THREAD_NAME_KEY, CLIENT_THREAD_POOL_NAME);
+        // 客户端默认线程池使用 CachedThreadPool ，这里可以自己替换为其他的线程池
         url = url.addParameterIfAbsent(THREADPOOL_KEY, DEFAULT_CLIENT_THREADPOOL);
         executor = executorRepository.createExecutorIfAbsent(url);
     }

@@ -89,19 +89,42 @@ public abstract class AbstractCodec implements Codec2 {
         return false;
     }
 
+    /**
+     * 获取序列化实现类
+     * @param channel Channel
+     * @param req     Request
+     * @return Serialization
+     */
     protected Serialization getSerialization(Channel channel, Request req) {
         return CodecSupport.getSerialization(channel.getUrl());
     }
 
+    /**
+     * 获取序列化实现类
+     * @param channel Channel
+     * @param res     Response
+     * @return Serialization
+     */
     protected Serialization getSerialization(Channel channel, Response res) {
         return CodecSupport.getSerialization(channel.getUrl());
     }
 
+    /**
+     * 获取序列化实现类
+     * @param channel Channel
+     * @return Serialization
+     */
     protected Serialization getSerialization(Channel channel) {
         return CodecSupport.getSerialization(channel.getUrl());
     }
 
+    /**
+     * 是否客户端侧
+     * @param channel Channel
+     * @return boolean
+     */
     protected boolean isClientSide(Channel channel) {
+        // 判断当前的通道是否是客户端
         String side = (String) channel.getAttribute(SIDE_KEY);
         if (CLIENT_SIDE.equals(side)) {
             return true;
@@ -110,6 +133,7 @@ public abstract class AbstractCodec implements Codec2 {
         } else {
             InetSocketAddress address = channel.getRemoteAddress();
             URL url = channel.getUrl();
+            // 如果url中与address中维护的远端端口号一致，并且与远端IP地址一致，则认为是客户端
             boolean isClient = url.getPort() == address.getPort()
                 && NetUtils.filterLocalHost(url.getIp()).equals(
                 NetUtils.filterLocalHost(address.getAddress()
@@ -120,6 +144,11 @@ public abstract class AbstractCodec implements Codec2 {
         }
     }
 
+    /**
+     * 是否是服务端侧
+     * @param channel Channel
+     * @return boolean
+     */
     protected boolean isServerSide(Channel channel) {
         return !isClientSide(channel);
     }

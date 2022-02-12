@@ -72,6 +72,9 @@ public abstract class AbstractServer extends AbstractEndpoint implements Remotin
             throw new RemotingException(url.toInetSocketAddress(), null, "Failed to bind " + getClass().getSimpleName()
                     + " on " + getLocalAddress() + ", cause: " + t.getMessage(), t);
         }
+        // 服务端的线程池在这里创建的，服务端因为URL中不包含 threadpool 参数，默认就走 FixedThreadPool 线程池。
+        // 线程池的使用在 AllChannelHandler 中的 received 方法中。
+        // 最终会调用 org.apache.dubbo.remoting.transport.dispatcher.WrappedChannelHandler.getSharedExecutorService 方法获取到线程池对象
         executor = executorRepository.createExecutorIfAbsent(url);
     }
 

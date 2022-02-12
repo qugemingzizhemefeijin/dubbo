@@ -32,6 +32,9 @@ import java.util.concurrent.RejectedExecutionException;
 public class AllChannelHandler extends WrappedChannelHandler {
 
     public AllChannelHandler(ChannelHandler handler, URL url) {
+        // 此处传递过来的 handler 是通过 ChannelHandlers 这个类的 wrap 封装的。
+        // ChannelHandlers.wrap(ChannelHandler handler, URL url)
+        // 一般handler = DecodeHandler
         super(handler, url);
     }
 
@@ -49,6 +52,7 @@ public class AllChannelHandler extends WrappedChannelHandler {
     public void disconnected(Channel channel) throws RemotingException {
         ExecutorService executor = getExecutorService();
         try {
+            // 如果子类为 NettyServer 则 handler 默认为 DecodeHandler
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.DISCONNECTED));
         } catch (Throwable t) {
             throw new ExecutionException("disconnect event", channel, getClass() + " error when process disconnected event .", t);
@@ -57,6 +61,7 @@ public class AllChannelHandler extends WrappedChannelHandler {
 
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
+        // 这里会通过 DubboServerHandler 线程池来进行异步的数据处理以及响应，handler = DecodeHandler
         ExecutorService executor = getPreferredExecutorService(message);
         try {
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
