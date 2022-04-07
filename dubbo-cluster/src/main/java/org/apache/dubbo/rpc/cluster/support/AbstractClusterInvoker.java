@@ -64,7 +64,7 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
     private static final Logger logger = LoggerFactory.getLogger(AbstractClusterInvoker.class);
 
     /**
-     * 服务目录对象
+     * 服务注册中心对象，RegistryDirectory
      */
     protected Directory<T> directory;
 
@@ -92,6 +92,7 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
             throw new IllegalArgumentException("service directory == null");
         }
 
+        // RegistryDirectory
         this.directory = directory;
         //sticky: invoker.isAvailable() should always be checked before using when availablecheck is true.
         // 当 cluster.availablecheck 为 true 时，应始终在使用前进行检查。默认true

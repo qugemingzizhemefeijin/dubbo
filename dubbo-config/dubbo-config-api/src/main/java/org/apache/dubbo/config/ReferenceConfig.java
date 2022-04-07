@@ -454,6 +454,20 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             if (urls.size() == 1) {
                 // 调用 RegistryProtocol 的 refer 构建 Invoker 实例
                 // 在单注册中心或是直连单个服务提供方的时候，通过Protocol的适配器选择对应的Protocol实现创建Invoker对象
+                // 这一步会注册到目标服务的consumers中
+                // 0. org.apache.dubbo.registry.integration.RegistryProtocol.refer
+                // 1. org.apache.dubbo.registry.integration.RegistryDirectory.toInvokers
+                // 2. org.apache.dubbo.rpc.protocol.ProtocolListenerWrapper.refer
+                // 3. org.apache.dubbo.rpc.protocol.ProtocolFilterWrapper.refer
+                // 4. org.apache.dubbo.qos.protocol.QosProtocolWrapper.refer
+                // 5. org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol.protocolBindingRefer，掉入的地址。
+                // 6. org.apache.dubbo.rpc.protocol.ProtocolFilterWrapper.buildInvokerChain
+                // 7. org.apache.dubbo.rpc.protocol.ProtocolFilterWrapper.refer
+                // 8. org.apache.dubbo.registry.integration.RegistryProtocol.refer
+                // 9.org.apache.dubbo.registry.zookeeper.ZookeeperRegistry
+                // 10. org.apache.dubbo.registry.support.FailbackRegistry.register
+                // REF_PROTOCOL 是个自动生成的自适应类，源码在 org.apache.dubbo.common.extension.ExtensionLoader.createAdaptiveExtensionClass 中有。
+                // invoker = MockClusterInvoker
                 invoker = REF_PROTOCOL.refer(interfaceClass, urls.get(0));
             } else {
                 // 多个注册中心或多个服务提供者，或者两者混合
@@ -523,8 +537,13 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         return (T) PROXY_FACTORY.getProxy(invoker, ProtocolUtils.isGeneric(generic));
     }
 
+    /**
+     * 检查当前的服务是否可用
+     * @throws IllegalStateException 如果服务不可能，将抛出此异常
+     */
     private void checkInvokerAvailable() throws IllegalStateException {
         if (shouldCheck() && !invoker.isAvailable()) {
+            // 销毁注册的消费者
             invoker.destroy();
             throw new IllegalStateException("Failed to check the status of the service "
                     + interfaceName

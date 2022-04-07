@@ -147,6 +147,7 @@ public abstract class AbstractCluster implements Cluster {
 
         @Override
         public void destroy() {
+            // FailoverClusterInvoker
             clusterInvoker.destroy();
         }
 
