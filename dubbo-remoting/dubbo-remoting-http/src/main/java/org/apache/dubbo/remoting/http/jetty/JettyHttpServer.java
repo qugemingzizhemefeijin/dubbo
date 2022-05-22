@@ -51,29 +51,41 @@ public class JettyHttpServer extends AbstractHttpServer {
         this.url = url;
         // TODO we should leave this setting to slf4j
         // we must disable the debug logging for production use
+        // 设置日志
         Log.setLog(new StdErrLog());
+        // 禁用调试用的日志
         Log.getLog().setDebugEnabled(false);
 
+        // 添加http服务器处理器
         DispatcherServlet.addHttpHandler(url.getParameter(Constants.BIND_PORT_KEY, url.getPort()), handler);
 
+        // 获得线程数
         int threads = url.getParameter(THREADS_KEY, DEFAULT_THREADS);
+
+        // 创建线程池
         QueuedThreadPool threadPool = new QueuedThreadPool();
+        // 设置线程池配置
         threadPool.setDaemon(true);
         threadPool.setMaxThreads(threads);
         threadPool.setMinThreads(threads);
 
+        // 创建Jetty服务器对象
         server = new Server(threadPool);
 
+        // 创建服务连接器
         ServerConnector connector = new ServerConnector(server);
 
+        // 获得绑定的ip
         String bindIp = url.getParameter(Constants.BIND_IP_KEY, url.getHost());
         if (!url.isAnyHost() && NetUtils.isValidLocalHost(bindIp)) {
             connector.setHost(bindIp);
         }
         connector.setPort(url.getParameter(Constants.BIND_PORT_KEY, url.getPort()));
 
+        // 添加连接器
         server.addConnector(connector);
 
+        // 添加DispatcherServlet到jetty
         ServletHandler servletHandler = new ServletHandler();
         ServletHolder servletHolder = servletHandler.addServletWithMapping(DispatcherServlet.class, "/*");
         servletHolder.setInitOrder(2);
@@ -83,9 +95,11 @@ public class JettyHttpServer extends AbstractHttpServer {
         // TODO Context.SESSIONS is the best option here? (In jetty 9.x, it becomes ServletContextHandler.SESSIONS)
         ServletContextHandler context = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
         context.setServletHandler(servletHandler);
+        // 添加 ServletContext 对象，到 ServletManager 中
         ServletManager.getInstance().addServletContext(url.getParameter(Constants.BIND_PORT_KEY, url.getPort()), context.getServletContext());
 
         try {
+            // 启动jetty服务器
             server.start();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to start jetty server on " + url.getParameter(Constants.BIND_IP_KEY) + ":" + url.getParameter(Constants.BIND_PORT_KEY) + ", cause: "
@@ -97,11 +111,12 @@ public class JettyHttpServer extends AbstractHttpServer {
     public void close() {
         super.close();
 
-        //
+        // 移除 ServletContext 对象
         ServletManager.getInstance().removeServletContext(url.getParameter(Constants.BIND_PORT_KEY, url.getPort()));
 
         if (server != null) {
             try {
+                // 停止服务器
                 server.stop();
             } catch (Exception e) {
                 logger.warn(e.getMessage(), e);

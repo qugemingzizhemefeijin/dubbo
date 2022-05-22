@@ -38,9 +38,24 @@ import java.util.Enumeration;
 
 public class DubboHttpProtocolServer extends BaseRestProtocolServer {
 
+    /**
+     * HttpServletDispatcher实例
+     */
     private final HttpServletDispatcher dispatcher = new HttpServletDispatcher();
+
+    /**
+     * Resteasy的服务部署器
+     */
     private final ResteasyDeployment deployment = new ResteasyDeployment();
+
+    /**
+     * http绑定器
+     */
     private HttpBinder httpBinder;
+
+    /**
+     * http服务器
+     */
     private HttpServer httpServer;
 //    private boolean isExternalServer;
 
@@ -51,9 +66,12 @@ public class DubboHttpProtocolServer extends BaseRestProtocolServer {
     @Override
     protected void doStart(URL url) {
         // TODO jetty will by default enable keepAlive so the xml config has no effect now
+        // 创建http服务器
         httpServer = httpBinder.bind(url, new RestHandler());
 
+        // 获得ServletContext
         ServletContext servletContext = ServletManager.getInstance().getServletContext(url.getPort());
+        // 如果为空 ，则获得默认端口对应的ServletContext对象
         if (servletContext == null) {
             servletContext = ServletManager.getInstance().getServletContext(ServletManager.EXTERNAL_SERVER_PORT);
         }
@@ -62,9 +80,11 @@ public class DubboHttpProtocolServer extends BaseRestProtocolServer {
                     "make sure that you've configured " + BootstrapListener.class.getName() + " in web.xml");
         }
 
+        // 设置属性部署器
         servletContext.setAttribute(ResteasyDeployment.class.getName(), deployment);
 
         try {
+            // 初始化
             dispatcher.init(new SimpleServletConfig(servletContext));
         } catch (ServletException e) {
             throw new RpcException(e);
@@ -85,13 +105,16 @@ public class DubboHttpProtocolServer extends BaseRestProtocolServer {
 
         @Override
         public void handle(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+            // 设置远程地址
             RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
+            // 请求相关的服务
             dispatcher.service(request, response);
         }
     }
 
     private static class SimpleServletConfig implements ServletConfig {
 
+        // ServletContext对象
         private final ServletContext servletContext;
 
         public SimpleServletConfig(ServletContext servletContext) {

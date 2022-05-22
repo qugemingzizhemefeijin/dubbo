@@ -22,13 +22,20 @@ import org.apache.dubbo.common.extension.SPI;
 import org.apache.dubbo.remoting.Constants;
 
 /**
- * HttpBinder
+ * 该接口是http绑定器接口，其中就定义了一个方法就是绑定方法，并且返回服务器对象。该接口是一个可扩展接口，默认实现JettyHttpBinder。
+ *
+ * <p>一共有3个子类:
+ * <ul>
+ *     <li>JettyHttpBinder</li>
+ *     <li>ServletHttpBinder</li>
+ *     <li>TomcatHttpBinder</li>
+ * </ul>
  */
 @SPI("jetty")
 public interface HttpBinder {
 
     /**
-     * bind the server.
+     * 绑定一个HTTP Server
      *
      * @param url server url.
      * @return server.

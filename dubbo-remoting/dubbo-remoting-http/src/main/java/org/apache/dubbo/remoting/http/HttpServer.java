@@ -22,12 +22,15 @@ import org.apache.dubbo.remoting.RemotingServer;
 
 import java.net.InetSocketAddress;
 
+/**
+ * 生产者当开启HTTP协议的的时候，服务接口
+ */
 public interface HttpServer extends Resetable, RemotingServer {
 
     /**
-     * get http handler.
+     * 获得http的处理类
      *
-     * @return http handler.
+     * @return HttpHandler
      */
     HttpHandler getHttpHandler();
 
@@ -39,9 +42,9 @@ public interface HttpServer extends Resetable, RemotingServer {
     URL getUrl();
 
     /**
-     * get local address.
+     * 获得本地服务器地址
      *
-     * @return local address.
+     * @return InetSocketAddress
      */
     InetSocketAddress getLocalAddress();
 

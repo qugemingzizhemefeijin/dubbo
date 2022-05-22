@@ -21,10 +21,15 @@ import org.apache.dubbo.remoting.Constants;
 import org.apache.dubbo.remoting.http.HttpHandler;
 import org.apache.dubbo.remoting.http.support.AbstractHttpServer;
 
+/**
+ * 这个需要基于Servlet容器来实现，如本身dubbo部署就是基于tomcat或者jetty、resin等。
+ * 然后需要将 DispatcherServlet 注册到web.xml中，让web容器来管理。
+ */
 public class ServletHttpServer extends AbstractHttpServer {
 
     public ServletHttpServer(URL url, HttpHandler handler) {
         super(url, handler);
+        // 把 HttpHandler 到 DispatcherServlet 中，默认端口为8080
         DispatcherServlet.addHttpHandler(url.getParameter(Constants.BIND_PORT_KEY, 8080), handler);
     }
 

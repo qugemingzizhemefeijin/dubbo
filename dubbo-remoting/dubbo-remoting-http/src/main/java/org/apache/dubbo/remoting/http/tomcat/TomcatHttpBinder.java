@@ -25,6 +25,7 @@ public class TomcatHttpBinder implements HttpBinder {
 
     @Override
     public HttpServer bind(URL url, HttpHandler handler) {
+        // 初始化tomcat服务
         return new TomcatHttpServer(url, handler);
     }
 

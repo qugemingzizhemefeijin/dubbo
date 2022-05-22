@@ -70,13 +70,16 @@ public class RpcContextFilter implements ContainerRequestFilter, ClientRequestFi
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
         int size = 0;
+        // 遍历附加值
         for (Map.Entry<String, Object> entry : RpcContext.getContext().getObjectAttachments().entrySet()) {
             String key = entry.getKey();
             String value = (String) entry.getValue();
+            // 如果key或者value有出现=或者，则抛出异常
             if (illegalHttpHeaderKey(key) || illegalHttpHeaderValue(value)) {
                 throw new IllegalArgumentException("The attachments of " + RpcContext.class.getSimpleName() + " must not contain ',' or '=' when using rest protocol");
             }
 
+            // 加入UTF-8配置，计算协议头大小
             // TODO for now we don't consider the differences of encoding and server limit
             if (value != null) {
                 size += value.getBytes(StandardCharsets.UTF_8).length;
@@ -86,6 +89,8 @@ public class RpcContextFilter implements ContainerRequestFilter, ClientRequestFi
             }
 
             String attachments = key + "=" + value;
+
+            // 加入到请求头上
             requestContext.getHeaders().add(DUBBO_ATTACHMENT_HEADER, attachments);
         }
     }

@@ -43,21 +43,34 @@ import static org.apache.dubbo.rpc.protocol.rest.Constants.KEEP_ALIVE_KEY;
  */
 public class NettyRestProtocolServer extends BaseRestProtocolServer {
 
+    /**
+     * NettyJaxrsServer对象
+     */
     private final NettyJaxrsServer server = new NettyJaxrsServer();
 
     @Override
     protected void doStart(URL url) {
+        // 获得IP
         String bindIp = url.getParameter(BIND_IP_KEY, url.getHost());
         if (!url.isAnyHost() && NetUtils.isValidLocalHost(bindIp)) {
+            // 设置服务名称
             server.setHostname(bindIp);
         }
+        // 设置端口
         server.setPort(url.getParameter(BIND_PORT_KEY, url.getPort()));
+        // 通道选项集合
         Map<ChannelOption, Object> channelOption = new HashMap<ChannelOption, Object>();
+        // 保持连接检测对方主机是否崩溃
         channelOption.put(ChannelOption.SO_KEEPALIVE, url.getParameter(KEEP_ALIVE_KEY, DEFAULT_KEEP_ALIVE));
+        // 设置配置
         server.setChildChannelOptions(channelOption);
+        // 设置线程数，默认为200
         server.setExecutorThreadCount(url.getParameter(THREADS_KEY, DEFAULT_THREADS));
+        // 设置IO工作线程数
         server.setIoWorkerCount(url.getParameter(IO_THREADS_KEY, DEFAULT_IO_THREADS));
+        // 设置最大的请求数
         server.setMaxRequestSize(url.getParameter(PAYLOAD_KEY, DEFAULT_PAYLOAD));
+        // 启动服务
         server.start();
     }
 

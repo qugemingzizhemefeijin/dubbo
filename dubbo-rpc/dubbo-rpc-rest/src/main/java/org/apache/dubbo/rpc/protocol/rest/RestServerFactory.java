@@ -25,6 +25,9 @@ import org.apache.dubbo.remoting.http.HttpBinder;
  */
 public class RestServerFactory {
 
+    /**
+     * http绑定器
+     */
     private HttpBinder httpBinder;
 
     public void setHttpBinder(HttpBinder httpBinder) {
@@ -33,9 +36,11 @@ public class RestServerFactory {
 
     public RestProtocolServer createServer(String name) {
         // TODO move names to Constants
+        // 如果是servlet或者jetty或者tomcat，则创建DubboHttpServer
         if ("servlet".equalsIgnoreCase(name) || "jetty".equalsIgnoreCase(name) || "tomcat".equalsIgnoreCase(name)) {
             return new DubboHttpProtocolServer(httpBinder);
         } else if ("netty".equalsIgnoreCase(name)) {
+            // 如果是netty，那么直接创建netty服务器
             return new NettyRestProtocolServer();
         } else {
             throw new IllegalArgumentException("Unrecognized server name: " + name);

@@ -26,24 +26,47 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ServletManager {
 
+    /**
+     * 外部服务器端口，用于 `servlet` 的服务器端口
+     */
     public static final int EXTERNAL_SERVER_PORT = -1234;
 
+    /**
+     * 单例
+     */
     private static final ServletManager INSTANCE = new ServletManager();
 
+    /**
+     * ServletContext 集合
+     */
     private final Map<Integer, ServletContext> contextMap = new ConcurrentHashMap<Integer, ServletContext>();
 
     public static ServletManager getInstance() {
         return INSTANCE;
     }
 
+    /**
+     * 添加ServletContext
+     * @param port           端口号
+     * @param servletContext ServletContext
+     */
     public void addServletContext(int port, ServletContext servletContext) {
         contextMap.put(port, servletContext);
     }
 
+    /**
+     * 移除ServletContext
+     * @param port 端口号
+     */
     public void removeServletContext(int port) {
         contextMap.remove(port);
     }
 
+    /**
+     * 获得ServletContext对象
+     * @param port 端口号
+     * @return ServletContext
+     */
     public ServletContext getServletContext(int port) {
         return contextMap.get(port);
     }

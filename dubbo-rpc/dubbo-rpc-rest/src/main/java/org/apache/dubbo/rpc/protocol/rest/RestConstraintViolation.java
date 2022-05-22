@@ -27,8 +27,19 @@ public class RestConstraintViolation implements Serializable {
 
     private static final long serialVersionUID = -23497234978L;
 
+    /**
+     * 地址
+     */
     private String path;
+
+    /**
+     * 消息
+     */
     private String message;
+
+    /**
+     * 值
+     */
     private String value;
 
     public RestConstraintViolation(String path, String message, String value) {

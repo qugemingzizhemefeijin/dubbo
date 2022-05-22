@@ -24,35 +24,46 @@ import org.jboss.resteasy.spi.ResteasyDeployment;
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SPLIT_PATTERN;
 import static org.apache.dubbo.rpc.protocol.rest.Constants.EXTENSION_KEY;
 
+/**
+ * 实现了RestProtocolServer接口，是rest服务的抽象类，把getDeployment和doStart方法进行抽象，让子类专注于中这两个方法的实现。
+ */
 public abstract class BaseRestProtocolServer implements RestProtocolServer {
 
     private String address;
 
     @Override
     public void start(URL url) {
+        // 支持两种 Content-Type
         getDeployment().getMediaTypeMappings().put("json", "application/json");
         getDeployment().getMediaTypeMappings().put("xml", "text/xml");
 //        server.getDeployment().getMediaTypeMappings().put("xml", "application/xml");
+        // 添加拦截器
         getDeployment().getProviderClasses().add(RpcContextFilter.class.getName());
         // TODO users can override this mapper, but we just rely on the current priority strategy of resteasy
+        // 异常类映射
         getDeployment().getProviderClasses().add(RpcExceptionMapper.class.getName());
 
+        // 添加需要加载的类
         loadProviders(url.getParameter(EXTENSION_KEY, ""));
 
+        // 开启服务器
         doStart(url);
     }
 
     @Override
     public void deploy(Class resourceDef, Object resourceInstance, String contextPath) {
         if (StringUtils.isEmpty(contextPath)) {
+            // 添加自定义资源实现端点，部署服务器
             getDeployment().getRegistry().addResourceFactory(new DubboResourceFactory(resourceInstance, resourceDef));
         } else {
+            // 添加自定义资源实现端点。指定contextPath
             getDeployment().getRegistry().addResourceFactory(new DubboResourceFactory(resourceInstance, resourceDef), contextPath);
         }
     }
 
     @Override
     public void undeploy(Class resourceDef) {
+        // 取消服务器部署
         getDeployment().getRegistry().removeRegistrations(resourceDef);
     }
 
