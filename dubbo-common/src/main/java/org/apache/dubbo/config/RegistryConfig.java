@@ -508,6 +508,7 @@ public class RegistryConfig extends AbstractConfig {
 
     @Override
     public void refresh() {
+        // 调用父类的 org.apache.dubbo.config.AbstractConfig.refresh()方法，会根据现有的配置，将配置项直接反射调用设置到注册中心的属性中
         super.refresh();
         if (StringUtils.isNotEmpty(this.getId())) {
             this.setPrefix(REGISTRIES_SUFFIX);

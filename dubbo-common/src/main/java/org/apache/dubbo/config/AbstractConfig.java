@@ -470,8 +470,9 @@ public abstract class AbstractConfig implements Serializable {
     public void refresh() {
         Environment env = ApplicationModel.getEnvironment();
         try {
+            // 此处会获取当前项目中所有的dubbo的配置信息
             CompositeConfiguration compositeConfiguration = env.getPrefixedConfiguration(this);
-            // loop methods, get override value and set the new value back to method
+            // loop methods, get override value and set the new value back to method 循环方法，获取覆盖值并将新值设置回方法
             Method[] methods = getClass().getMethods();
             for (Method method : methods) {
                 if (MethodUtils.isSetter(method)) {

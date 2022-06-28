@@ -67,6 +67,8 @@ public class AllChannelHandler extends WrappedChannelHandler {
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
         } catch (Throwable t) {
         	if(message instanceof Request && t instanceof RejectedExecutionException){
+                // 这里注意一下，如果线程池发生了 RejectedExecutionException，则客户端调用的方法是void，则不会将请求传递给客户端，这样子客户端就不知道是什么错误了。
+                // 有返回值的话，则至少能看到是 线程池 threadpool is exhausted 满的异常信息，方便排查问题。
                 sendFeedback(channel, (Request) message, t);
                 return;
         	}

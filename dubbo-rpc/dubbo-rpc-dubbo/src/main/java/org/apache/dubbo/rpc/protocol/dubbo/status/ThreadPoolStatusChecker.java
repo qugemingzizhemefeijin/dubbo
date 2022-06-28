@@ -29,6 +29,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * ThreadPoolStatusChecker
+ *
+ * <p>这个已经不可用了
+ * <p>issue 6625 https://github.com/apache/dubbo/issues/6625
+ * <p>issue 8140 https://github.com/apache/dubbo/issues/8140
+ *
  */
 @Activate
 public class ThreadPoolStatusChecker implements StatusChecker {

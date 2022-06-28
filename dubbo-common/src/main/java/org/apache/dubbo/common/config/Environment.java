@@ -40,7 +40,11 @@ public class Environment extends LifecycleAdapter implements FrameworkExt {
     private final PropertiesConfiguration propertiesConfiguration;
     private final SystemConfiguration systemConfiguration;
     private final EnvironmentConfiguration environmentConfiguration;
+    
+    // 项目扩展配置（这个值是从配置中心读取到，并通过setExternalConfigMap注入进来的）
     private final InmemoryConfiguration externalConfiguration;
+
+    // 应用扩展配置
     private final InmemoryConfiguration appExternalConfiguration;
 
     private CompositeConfiguration globalConfiguration;

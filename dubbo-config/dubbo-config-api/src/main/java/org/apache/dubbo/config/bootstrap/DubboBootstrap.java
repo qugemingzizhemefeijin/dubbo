@@ -1041,6 +1041,11 @@ public class DubboBootstrap {
     }
     /* serve for builder apis, end */
 
+    /**
+     * 通过 ConfigCenterConfig 对象初始化环境
+     * @param configCenter 配置中心
+     * @return DynamicConfiguration
+     */
     private DynamicConfiguration prepareEnvironment(ConfigCenterConfig configCenter) {
         if (configCenter.isValid()) {
             if (!configCenter.checkOrUpdateInited()) {
@@ -1059,7 +1064,9 @@ public class DubboBootstrap {
             }
             try {
                 environment.setConfigCenterFirst(configCenter.isHighestPriority());
+                // 将配置中心的一些配置信息初始化到扩展配置中
                 environment.updateExternalConfigurationMap(parseProperties(configContent));
+                // 将配置中心的一些APP配置信息初始化到APP扩展配置中
                 environment.updateAppExternalConfigurationMap(parseProperties(appConfigContent));
             } catch (IOException e) {
                 throw new IllegalStateException("Failed to parse configurations from Config Center.", e);
