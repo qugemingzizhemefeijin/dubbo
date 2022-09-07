@@ -49,14 +49,16 @@ import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_CLUSTER_STICKY;
 
 /**
  * AbstractClusterInvoker 集群容错顶层抽象类，实现了接口Invoker。构造方法入参必须有Directory对象。
- *
+ * <br><br>
  * Directory对象叫做服务目录，持有全部可用的远程服务提供者列表，客户端使用远程服务提供者访问远程服务。
  * 远程服务提供者也实现了Invoker接口，如果远程服务以dubbo协议提供，那么客户端通过Invoker接口的实现类DubboInvoker访问。
- *
- * 1、先生成Invoker对象，根据不同的Cluster实现生成不同类型的ClusterInvoker（这个就是服务引用阶段）
- * 2、调用list从Directory中获取可用的服务列表（从这一步开始真正的调用流程）,接着使用Router接口根据路由规则过滤一部分服务后最终返回服务列表
- * 3、调用select做负载均衡，通过不同的负载均衡策略选出一个服务作为最后的调用
- * 4、调用invoke做RPC调用，对于调用出现异常、成功、失败等情况，每种容错机制会有不同的处理方式
+ * <br><br>
+ * <ul>
+ *  <li>1、先生成Invoker对象，根据不同的Cluster实现生成不同类型的ClusterInvoker（这个就是服务引用阶段）</li>
+ *  <li>2、调用list从Directory中获取可用的服务列表（从这一步开始真正的调用流程）,接着使用Router接口根据路由规则过滤一部分服务后最终返回服务列表</li>
+ *  <li>3、调用select做负载均衡，通过不同的负载均衡策略选出一个服务作为最后的调用</li>
+ *  <li>4、调用invoke做RPC调用，对于调用出现异常、成功、失败等情况，每种容错机制会有不同的处理方式</li>
+ * </ul>
  *
  */
 public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
@@ -78,6 +80,9 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
      */
     private AtomicBoolean destroyed = new AtomicBoolean(false);
 
+    /**
+     * 记录最近的一次粘滞请求的调用对象
+     */
     private volatile Invoker<T> stickyInvoker = null;
 
     public AbstractClusterInvoker() {
@@ -162,6 +167,7 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
         }
         String methodName = invocation == null ? StringUtils.EMPTY_STRING : invocation.getMethodName();
 
+        // 开启粘滞连接那么我们可以看到总是访问同一个服务提供者
         boolean sticky = invokers.get(0).getUrl()
                 .getMethodParameter(methodName, CLUSTER_STICKY_KEY, DEFAULT_CLUSTER_STICKY);
 
@@ -171,11 +177,12 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
         }
         //ignore concurrency problem
         if (sticky && stickyInvoker != null && (selected == null || !selected.contains(stickyInvoker))) {
+            // 如果需要检查可用性并且保存的粘滞调用对象可用，则直接返回调用对象
             if (availablecheck && stickyInvoker.isAvailable()) {
                 return stickyInvoker;
             }
         }
-
+        // 通过负载均衡策略来选择调用的对象
         Invoker<T> invoker = doSelect(loadbalance, invocation, invokers, selected);
 
         if (sticky) {
@@ -184,25 +191,41 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
         return invoker;
     }
 
+    /**
+     * 根据负载均衡策略选择可被调用的对象
+     * @param loadbalance 负载均衡策略
+     * @param invocation  调用信息
+     * @param invokers    可被调用的对象
+     * @param selected    排除或不排除选定的调用者（用于重选择，防止一些策略一直路由到某一个Invoker）
+     * @return Invoker<T>
+     * @throws RpcException
+     */
     private Invoker<T> doSelect(LoadBalance loadbalance, Invocation invocation,
                                 List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
 
         if (CollectionUtils.isEmpty(invokers)) {
             return null;
         }
+        // 当可被选择的调用者就1个的话，那就直接返回此调用者
         if (invokers.size() == 1) {
             return invokers.get(0);
         }
+        // 执行负载均衡的策略获取到选中的调用者
         Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);
 
         //If the `invoker` is in the  `selected` or invoker is unavailable && availablecheck is true, reselect.
+        // 这个是说如果上面选择的调用者要么存在于selected集合中，要么是被标记为不可用，但是却要求检查可用性，才会触发重选择
+        // 1.selected是为了防止一直被选中某一个；
+        // 2.如果选择出来的不可用，需要重置reselect；
         if ((selected != null && selected.contains(invoker))
                 || (!invoker.isAvailable() && getUrl() != null && availablecheck)) {
             try {
+                // 调用重选策略
                 Invoker<T> rInvoker = reselect(loadbalance, invocation, invokers, selected, availablecheck);
                 if (rInvoker != null) {
                     invoker = rInvoker;
                 } else {
+                    // 如果还是没选择到，最兜底选择当前调用对象的下一个对象
                     //Check the index of current selected invoker, if it's not the last one, choose the one at index+1.
                     int index = invokers.indexOf(invoker);
                     try {
@@ -221,7 +244,9 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
 
     /**
      * Reselect, use invokers not in `selected` first, if all invokers are in `selected`,
-     * just pick an available one using loadbalance policy.
+     * just pick an available one using loadbalance policy. <br><br>
+     *
+     * 重新选择，首先使用不在`selected`中的调用者，所有调用者都在`selected`中，只需使用负载平衡策略选择一个可用的调用者。
      *
      * @param loadbalance    load balance policy
      * @param invocation     invocation
@@ -239,6 +264,7 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
                 invokers.size() > 1 ? (invokers.size() - 1) : invokers.size());
 
         // First, try picking a invoker not in `selected`.
+        // 首先不要在selected中选择调用者
         for (Invoker<T> invoker : invokers) {
             if (availablecheck && !invoker.isAvailable()) {
                 continue;
@@ -249,19 +275,22 @@ public abstract class AbstractClusterInvoker<T> implements ClusterInvoker<T> {
             }
         }
 
+        // 如果有可用的，重新调用负载均衡策略来选择调用者
         if (!reselectInvokers.isEmpty()) {
             return loadbalance.select(reselectInvokers, getUrl(), invocation);
         }
 
         // Just pick an available invoker using loadbalance policy
+        // 如果前面未选出合适的调用者，则直接从selected中选择可用的
         if (selected != null) {
             for (Invoker<T> invoker : selected) {
                 if ((invoker.isAvailable()) // available first
-                        && !reselectInvokers.contains(invoker)) {
+                        && !reselectInvokers.contains(invoker)) { // 这里selected中存储的invoker还会重复？？
                     reselectInvokers.add(invoker);
                 }
             }
         }
+        // 重新选择
         if (!reselectInvokers.isEmpty()) {
             return loadbalance.select(reselectInvokers, getUrl(), invocation);
         }

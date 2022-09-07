@@ -40,7 +40,7 @@ import java.util.List;
  *   <li>基于最短响应时间的 {@link org.apache.dubbo.rpc.cluster.loadbalance.ShortestResponseLoadBalance}</li>
  * </ol>
  *
- * <p>LoadBalance 是一个扩展接口，默认使用的扩展实现是 RandomLoadBalance。
+ * <p>LoadBalance 是一个扩展接口，<b>默认使用的扩展实现是 RandomLoadBalance</b>。
  * <p>LoadBalance 接口中 select() 方法的核心功能是根据传入的 URL 和 Invocation，以及自身的负载均衡算法，从 Invoker 集合中选择一个 Invoker 返回。
  * <p>AbstractLoadBalance 抽象类并没有真正实现 select() 方法，只是对 Invoker 集合为空或是只包含一个 Invoker 对象的特殊情况进行了处理
  *

@@ -467,6 +467,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                 // 9.org.apache.dubbo.registry.zookeeper.ZookeeperRegistry
                 // 10. org.apache.dubbo.registry.support.FailbackRegistry.register
                 // REF_PROTOCOL 是个自动生成的自适应类，源码在 org.apache.dubbo.common.extension.ExtensionLoader.createAdaptiveExtensionClass 中有。
+                // REF_PROTOCOL = Protocol$Adaptive，内部最终会根据扫描到的包内配置将相同Class类型的包装类封装到cachedWrapperClasses属性中，然后挨个初始化，最后生成自适应类的返回类型。
                 // invoker = MockClusterInvoker
                 invoker = REF_PROTOCOL.refer(interfaceClass, urls.get(0));
             } else {
