@@ -54,6 +54,7 @@ public class HttpProtocol extends AbstractProxyProtocol {
 
     private final Map<String, JsonRpcServer> skeletonMap = new ConcurrentHashMap<>();
 
+    // 自动注入 HttpBinder$Adaptive
     private HttpBinder httpBinder;
 
     public HttpProtocol() {
@@ -81,16 +82,19 @@ public class HttpProtocol extends AbstractProxyProtocol {
         public void handle(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException {
             String uri = request.getRequestURI();
+            // 这里是否应该判断一下更好，如果skeleton为空，直接抛出500，而不是ServletException异常呢？
             JsonRpcServer skeleton = skeletonMap.get(uri);
+            // 是否支持跨域
             if (cors) {
                 response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "*");
                 response.setHeader(ACCESS_CONTROL_ALLOW_METHODS_HEADER, "POST");
                 response.setHeader(ACCESS_CONTROL_ALLOW_HEADERS_HEADER, "*");
             }
+            // OPTIONS调用只是判断是否暴露的服务顺畅
             if (request.getMethod().equalsIgnoreCase("OPTIONS")) {
                 response.setStatus(200);
             } else if (request.getMethod().equalsIgnoreCase("POST")) {
-
+                // 处理POST的请求，对方法进行反射调用
                 RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
                 try {
                     skeleton.handle(request.getInputStream(), response.getOutputStream());
@@ -106,20 +110,30 @@ public class HttpProtocol extends AbstractProxyProtocol {
 
     @Override
     protected <T> Runnable doExport(final T impl, Class<T> type, URL url) throws RpcException {
+        // addr = host:port
         String addr = getAddr(url);
+        // 查看是否启动过服务，如果未启动，则将服务启动
         ProtocolServer protocolServer = serverMap.get(addr);
         if (protocolServer == null) {
+            // 根据绑定的类型创建不同的server，默认是jetty，并绑定 InternalHandler 用于接受请求的处理
             RemotingServer remotingServer = httpBinder.bind(url, new InternalHandler(url.getParameter("cors", false)));
+            // 设置服务绑定映射，ProxyProtocolServer代理了JettyHttpBinder对象
             serverMap.put(addr, new ProxyProtocolServer(remotingServer));
         }
+        // com.ddky.xxx.XXService
         final String path = url.getAbsolutePath();
+        // com.ddky.xxx.XXService/generic
         final String genericPath = path + "/" + GENERIC_KEY;
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        // JsonRpcServer 的接收处理
         JsonRpcServer skeleton = new JsonRpcServer(mapper, impl, type);
+        // JsonRpcServer 泛化调用的接收处理
         JsonRpcServer genericServer = new JsonRpcServer(mapper, impl, GenericService.class);
+        // 维护处理映射关系 org.apache.dubbo.rpc.protocol.http.HttpProtocol.InternalHandler.handle
         skeletonMap.put(path, skeleton);
         skeletonMap.put(genericPath, genericServer);
+        // 当服务销毁，执行清理动作
         return () -> {
             skeletonMap.remove(path);
             skeletonMap.remove(genericPath);
@@ -129,9 +143,11 @@ public class HttpProtocol extends AbstractProxyProtocol {
     @SuppressWarnings("unchecked")
     @Override
     protected <T> T doRefer(final Class<T> serviceType, URL url) throws RpcException {
+        // 判断是否支持泛化调用
         final String generic = url.getParameter(GENERIC_KEY);
         final boolean isGeneric = ProtocolUtils.isGeneric(generic) || serviceType.equals(GenericService.class);
         JsonProxyFactoryBean jsonProxyFactoryBean = new JsonProxyFactoryBean();
+        // 初始化jsonrpc4j的client实体
         JsonRpcProxyFactoryBean jsonRpcProxyFactoryBean = new JsonRpcProxyFactoryBean(jsonProxyFactoryBean);
         jsonRpcProxyFactoryBean.setRemoteInvocationFactory((methodInvocation) -> {
             RemoteInvocation invocation = new JsonRemoteInvocation(methodInvocation);
@@ -140,6 +156,7 @@ public class HttpProtocol extends AbstractProxyProtocol {
             }
             return invocation;
         });
+        // 强制将url的协议指定为http，如果要支持https，这里的代码需要改造
         String key = url.setProtocol("http").toIdentityString();
         if (isGeneric) {
             key = key + "/" + GENERIC_KEY;

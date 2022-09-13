@@ -104,6 +104,63 @@ public abstract class Wrapper {
     /**
      * get wrapper.
      *
+     * <pre>
+     * package org.apache.dubbo.common.bytecode;
+     *
+     * // ...
+     *
+     * public class Wrapper15 extends Wrapper implements ClassGenerator.DC {
+     *     public static String[] pns;
+     *     public static Map pts;
+     *     public static String[] mns;
+     *     public static String[] dmns;
+     *     public static Class[] mts0;
+     *     public static Class[] mts1;
+     *
+     *     // ...
+     *
+     *     public Object invokeMethod(Object object, String string, Class[] classArray, Object[] objectArray) throws InvocationTargetException {
+     *         YYYService yyyService;
+     *         try {
+     *             yyyService = (YYYService)object;
+     *         }
+     *         catch (Throwable throwable) {
+     *             throw new IllegalArgumentException(throwable);
+     *         }
+     *         try {
+     *             if ("list".equals(string) && classArray.length == 1) {
+     *                 return yyyService.list((YYY)objectArray[0]);
+     *             }
+     *             if ("listByName".equals(string) && classArray.length == 1) {
+     *                 return yyyService.listByName((Long)objectArray[0]);
+     *             }
+     *             if ("queryById".equals(string) && classArray.length == 1 && classArray[0].getName().equals("long")) {
+     *                 return yyyService.queryById(((Number)objectArray[0]).longValue());
+     *             }
+     *             if ("queryById".equals(string) && classArray.length == 1 && classArray[0].getName().equals("java.lang.Integer")) {
+     *                 return yyyService.queryById((Integer)objectArray[0]);
+     *             }
+     *         }
+     *         catch (Throwable throwable) {
+     *             throw new InvocationTargetException(throwable);
+     *         }
+     *         throw new NoSuchMethodException(new StringBuffer().append("Not found method \"").append(string).append("\" in class com.pv.service.YYYService.").toString());
+     *     }
+     *
+     *     // ...
+     *
+     *     @Override
+     *     public String[] getMethodNames() {
+     *         return mns;
+     *     }
+     *
+     *     @Override
+     *     public String[] getDeclaredMethodNames() {
+     *         return dmns;
+     *     }
+     * }
+     * </pre>
+     *
      * @param c Class instance.
      * @return Wrapper instance(not null).
      */

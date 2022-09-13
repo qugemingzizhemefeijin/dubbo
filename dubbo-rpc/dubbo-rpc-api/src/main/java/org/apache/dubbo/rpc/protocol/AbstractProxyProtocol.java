@@ -80,10 +80,12 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
         Exporter<T> exporter = (Exporter<T>) exporterMap.get(uri);
         if (exporter != null) {
             // When modifying the configuration through override, you need to re-expose the newly modified service.
+            // 如果URL与维护的URL不一致，有可能是通过override修改配置的，所以需要重新暴露服务。
             if (Objects.equals(exporter.getInvoker().getUrl(), invoker.getUrl())) {
                 return exporter;
             }
         }
+        // 暴露服务（如果是Http则是启动jetty），返回的Runnable是用于卸载的时候的资源清理
         final Runnable runnable = doExport(proxyFactory.getProxy(invoker, true), invoker.getInterface(), invoker.getUrl());
         exporter = new AbstractExporter<T>(invoker) {
             @Override
@@ -98,17 +100,20 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
                 }
             }
         };
+        // 维护URL与Exporter的映射关系
         exporterMap.put(uri, exporter);
         return exporter;
     }
 
     @Override
     protected <T> Invoker<T> protocolBindingRefer(final Class<T> type, final URL url) throws RpcException {
+        // 暴露接口调用，封装Invoker
         final Invoker<T> target = proxyFactory.getInvoker(doRefer(type, url), type, url);
         Invoker<T> invoker = new AbstractInvoker<T>(type, url) {
             @Override
             protected Result doInvoke(Invocation invocation) throws Throwable {
                 try {
+                    // 这个其实就是调用 jsonrpc4j
                     Result result = target.invoke(invocation);
                     // FIXME result is an AsyncRpcResult instance.
                     Throwable e = result.getException();
@@ -148,6 +153,11 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
         return re;
     }
 
+    /**
+     * 根据服务的URL获取host:port字符
+     * @param url URL
+     * @return String
+     */
     protected String getAddr(URL url) {
         String bindIp = url.getParameter(Constants.BIND_IP_KEY, url.getHost());
         if (url.getParameter(ANYHOST_KEY, false)) {
