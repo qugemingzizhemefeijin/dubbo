@@ -225,6 +225,16 @@ public class RpcUtils {
         }
     }
 
+    /**
+     * isOneway=true表示异步不带回调，isAsync=true表示异步带回调。<br><br>
+     * <ul>
+     *     <li>isOneway==true时，客户端send完请求后，直接return一个空结果的RpcResult；</li>
+     *     <li>isAsync==true时，客户端发起请求，设置一个ResponseFuture，直接return一个空结果的RpcResult，接下来当服务端处理完成，客户端Netty层在收到响应后会通过Future通知应用线程。</li>
+     * </ul>
+     * @param url URL
+     * @param inv Invocation
+     * @return boolean
+     */
     public static boolean isOneway(URL url, Invocation inv) {
         boolean isOneway;
         String config;

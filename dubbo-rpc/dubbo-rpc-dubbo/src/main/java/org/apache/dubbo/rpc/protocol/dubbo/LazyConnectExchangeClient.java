@@ -40,31 +40,82 @@ import static org.apache.dubbo.rpc.protocol.dubbo.Constants.LAZY_CONNECT_INITIAL
 
 /**
  * dubbo protocol support class.
+ *
+ * <p>
+ * <a href="https://github.com/apache/dubbo/pull/6959">fix consumer warning "safe guard client , should not be called ,must have a bug.</a>
+ *
+ * <p>
+ * 具体触发条件为：
+ * <ul>
+ *     <li>启动一个普通consumer和一个provider，consumer可以正常调用。</li>
+ *     <li>关闭provider进程，观察注册中心，一直等到provider注册的url消失。</li>
+ *     <li>重启provider进程，consumer再次调用，报"safe guard client , should not be called ,must have a bug."并且之后每5000次调用会触发一次。</li>
+ * </ul>
+ *
+ * <p>
+ * 这个问题的根源是LazyConnectExchangeClient在两种情况下被使用，这两种情况需要表现的行为不一样，但是代码一样导致。
+ * <p>
+ * 这两种情况一个是consumer主动设置为延迟连接，一个是consumer和provider断开连接时进行防御式编程，如果在连接关闭后还有请求过来就用这个延迟初始化的client处理一下。
+ *
+ * <p>
+ * 具体因为：
+ * <ul>
+ *     <li>第一步consumer正常调用时，DubboProtocol里面referenceClientMap字段保存了consumer连接provider的ReferenceCountExchangeClient。</li>
+ *     <li>第二步关闭provider进程一直到provider注册url消失时，referenceClientMap字段里面的引用还在，但是ReferenceCountExchangeClient的replaceWithLazyClient方法被调用，内部的ExchangeClient换成了LazyConnectExchangeClient。</li>
+ *     <li>第三步provider进程重启，consumer再次调用时，会重新获取到这个已经关闭的ReferenceCountExchangeClient。</li>
+ * </ul>
+ *
  */
 @SuppressWarnings("deprecation")
 final class LazyConnectExchangeClient implements ExchangeClient {
 
     /**
-     * when this warning rises from invocation, program probably have bug.
+     * when this warning rises from invocation, program probably have bug. 延迟连接请求错误key
      */
     protected static final String REQUEST_WITH_WARNING_KEY = "lazyclient_request_with_warning";
     private final static Logger logger = LoggerFactory.getLogger(LazyConnectExchangeClient.class);
+
+    /**
+     * 是否在延迟连接请求时错误
+     */
     protected final boolean requestWithWarning;
+
+    /**
+     * url对象
+     */
     private final URL url;
+
+    /**
+     * 请求处理器
+     */
     private final ExchangeHandler requestHandler;
+
+    /**
+     * 连接锁
+     */
     private final Lock connectLock = new ReentrantLock();
     private final int warning_period = 5000;
     /**
-     * lazy connect, initial state for connection
+     * lazy connect, initial state for connection. 初始化状态
      */
     private final boolean initialState;
+
+    /**
+     * 客户端对象
+     */
     private volatile ExchangeClient client;
+
+    /**
+     * 错误次数
+     */
     private AtomicLong warningcount = new AtomicLong(0);
 
     public LazyConnectExchangeClient(URL url, ExchangeHandler requestHandler) {
         // lazy connect, need set send.reconnect = true, to avoid channel bad status.
+        // 默认有重连
         this.url = url.addParameter(SEND_RECONNECT_KEY, Boolean.TRUE.toString());
         this.requestHandler = requestHandler;
+        // 默认延迟连接初始化成功
         this.initialState = url.getParameter(LAZY_CONNECT_INITIAL_STATE_KEY, DEFAULT_LAZY_CONNECT_INITIAL_STATE);
         this.requestWithWarning = url.getParameter(REQUEST_WITH_WARNING_KEY, false);
     }
