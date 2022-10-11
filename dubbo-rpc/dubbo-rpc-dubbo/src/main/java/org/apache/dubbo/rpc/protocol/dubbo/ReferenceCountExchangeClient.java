@@ -36,6 +36,9 @@ import static org.apache.dubbo.rpc.protocol.dubbo.Constants.LAZY_CONNECT_INITIAL
 
 /**
  * dubbo protocol support class.
+ *
+ * ExchangeClient的装饰，其中增强了调用次数多功能。
+ *
  */
 @SuppressWarnings("deprecation")
 final class ReferenceCountExchangeClient implements ExchangeClient {
@@ -45,6 +48,8 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
     private final AtomicInteger referenceCount = new AtomicInteger(0);
     private final AtomicInteger disconnectCount = new AtomicInteger(0);
     private final Integer maxDisconnectCount = 50;
+
+    // 客户端对象
     private ExchangeClient client;
 
     public ReferenceCountExchangeClient(ExchangeClient client) {
@@ -183,6 +188,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     private void replaceWithLazyClient() {
         // this is a defensive operation to avoid client is closed by accident, the initial state of the client is false
+        // 设置延迟连接初始化状态、是否重连、是否已经重连等配置
         URL lazyUrl = url.addParameter(LAZY_CONNECT_INITIAL_STATE_KEY, Boolean.TRUE)
                 //.addParameter(RECONNECT_KEY, Boolean.FALSE)
                 .addParameter(SEND_RECONNECT_KEY, Boolean.TRUE.toString());
@@ -195,6 +201,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
         /**
          * the order of judgment in the if statement cannot be changed.
          */
+        // 如果对应客户端不是LazyConnectExchangeClient类型或者已经关闭连接，则重新创建一个延迟连接等客户端
         if (!(client instanceof LazyConnectExchangeClient) || client.isClosed()) {
             client = new LazyConnectExchangeClient(lazyUrl, client.getExchangeHandler());
         }

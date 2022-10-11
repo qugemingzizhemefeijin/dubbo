@@ -54,9 +54,12 @@ public class FutureFilter implements Filter, Filter.Listener {
 
     @Override
     public void onResponse(Result result, Invoker<?> invoker, Invocation invocation) {
+        // 如果有异常
         if (result.hasException()) {
+            // 则调用异常的结果处理
             fireThrowCallback(invoker, invocation, result.getException());
         } else {
+            // 调用正常的结果处理
             fireReturnCallback(invoker, invocation, result.getValue());
         }
     }
@@ -81,9 +84,12 @@ public class FutureFilter implements Filter, Filter.Listener {
             throw new IllegalStateException("service:" + invoker.getUrl().getServiceKey() + " has a oninvoke callback config , but no such " + (onInvokeMethod == null ? "method" : "instance") + " found. url:" + invoker.getUrl());
         }
 
+        // 如果不可以访问，则设置为可访问
         ReflectUtils.makeAccessible(onInvokeMethod);
+        // 获得参数数组
         Object[] params = invocation.getArguments();
         try {
+            // 调用方法
             onInvokeMethod.invoke(onInvokeInst, params);
         } catch (InvocationTargetException e) {
             fireThrowCallback(invoker, invocation, e.getTargetException());
@@ -130,8 +136,10 @@ public class FutureFilter implements Filter, Filter.Listener {
         try {
             onReturnMethod.invoke(onReturnInst, params);
         } catch (InvocationTargetException e) {
+            // 则调用异常的结果处理
             fireThrowCallback(invoker, invocation, e.getTargetException());
         } catch (Throwable e) {
+            // 则调用异常的结果处理
             fireThrowCallback(invoker, invocation, e);
         }
     }
