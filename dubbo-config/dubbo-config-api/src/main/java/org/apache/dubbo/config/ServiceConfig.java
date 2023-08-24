@@ -714,6 +714,24 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
      * Configuration priority: environment variables -> java system properties -> host property in config file ->
      * /etc/hosts -> default network address -> first available network address
      *
+     * <p>
+     * ServiceConfig类中的findConfigedHosts方法获取ip信息
+     * <ul>
+     *     <li>DUBBO_DUBBO_IP_TO_BIND 环境变量</li>
+     *     <li>配置文件中：dubbo.protocol.host</li>
+     *     <li>配置文件中：dubbo.provider.host</li>
+     *     <li>InetAddress.getLocalHost().getHostAddress()</li>
+     *     <li>通过socket连接注册到注册中心的URL，来得到IP</li>
+     *     <li>通过遍历本机各个网卡，得到合适的网卡IP</li>
+     *     <li></li>
+     * </ul>
+     * <p>
+     * hostToRegistry(注册到注册中心的ip)的获取
+     * <ul>
+     *     <li>DUBBO_DUBBO_IP_TO_REGISTRY 环境变量</li>
+     *     <li>hostToRegistry = hostToBind</li>
+     * </ul>
+     *
      * @param protocolConfig
      * @param registryURLs
      * @param map
@@ -724,6 +742,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                                      Map<String, String> map) {
         boolean anyhost = false;
 
+        // 如果协议是dubbo的话，获取环境中的DUBBO_DUBBO_IP_TO_BIND
         String hostToBind = getValueFromConfig(protocolConfig, DUBBO_IP_TO_BIND);
         if (hostToBind != null && hostToBind.length() > 0 && isInvalidLocalHost(hostToBind)) {
             throw new IllegalArgumentException("Specified invalid bind ip from property:" + DUBBO_IP_TO_BIND + ", value:" + hostToBind);
@@ -731,14 +750,17 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
 
         // if bind ip is not found in environment, keep looking up
         if (StringUtils.isEmpty(hostToBind)) {
+            // 获取配置文件中：dubbo.protocol.host
             hostToBind = protocolConfig.getHost();
             if (provider != null && StringUtils.isEmpty(hostToBind)) {
+                // 获取配置文件中：dubbo.provider.host
                 hostToBind = provider.getHost();
             }
             if (isInvalidLocalHost(hostToBind)) {
                 anyhost = true;
                 try {
                     logger.info("No valid ip found from environment, try to find valid host from DNS.");
+                    // 利用Api来获取InetAddress.getLocalHost().getHostAddress()
                     hostToBind = InetAddress.getLocalHost().getHostAddress();
                 } catch (UnknownHostException e) {
                     logger.warn(e.getMessage(), e);
@@ -751,6 +773,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                                 continue;
                             }
                             try (Socket socket = new Socket()) {
+                                // 通过socket连接注册到注册中心的URL，来得到IP
                                 SocketAddress addr = new InetSocketAddress(registryURL.getHost(), registryURL.getPort());
                                 socket.connect(addr, 1000);
                                 hostToBind = socket.getLocalAddress().getHostAddress();
@@ -761,6 +784,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                         }
                     }
                     if (isInvalidLocalHost(hostToBind)) {
+                        // 通过遍历本机各个网卡，得到合适的网卡IP
                         hostToBind = getLocalHost();
                     }
                 }
@@ -770,12 +794,14 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         map.put(BIND_IP_KEY, hostToBind);
 
         // registry ip is not used for bind ip by default
+        // 获取DUBBO_DUBBO_IP_TO_REGISTRY 环境变量
         String hostToRegistry = getValueFromConfig(protocolConfig, DUBBO_IP_TO_REGISTRY);
         if (hostToRegistry != null && hostToRegistry.length() > 0 && isInvalidLocalHost(hostToRegistry)) {
             throw new IllegalArgumentException(
                     "Specified invalid registry ip from property:" + DUBBO_IP_TO_REGISTRY + ", value:" + hostToRegistry);
         } else if (StringUtils.isEmpty(hostToRegistry)) {
             // bind ip is used as registry ip by default
+            // 如果DUBBO_DUBBO_IP_TO_REGISTRY 环境变量为空得话，那么就把hostToRegistry设为hostToBind
             hostToRegistry = hostToBind;
         }
 
